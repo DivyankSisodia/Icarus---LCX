@@ -1,0 +1,14 @@
+{
+  "title": "4Sum",
+  "titleSlug": "4sum",
+  "frontendId": "18",
+  "difficulty": "Medium",
+  "language": "cpp",
+  "topicTags": [
+    "array",
+    "two-pointers",
+    "sorting"
+  ],
+  "openedAt": "2026-06-04T09:31:45.270Z",
+  "lastModifiedAt": "2026-06-04T09:31:45.270Z"
+}

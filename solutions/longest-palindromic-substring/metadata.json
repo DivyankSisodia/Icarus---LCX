@@ -1,0 +1,14 @@
+{
+  "title": "Longest Palindromic Substring",
+  "titleSlug": "longest-palindromic-substring",
+  "frontendId": "5",
+  "difficulty": "Medium",
+  "language": "cpp",
+  "topicTags": [
+    "two-pointers",
+    "string",
+    "dynamic-programming"
+  ],
+  "openedAt": "2026-06-04T11:40:22.459Z",
+  "lastModifiedAt": "2026-06-04T11:40:22.459Z"
+}

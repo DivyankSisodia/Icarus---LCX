@@ -1,0 +1,13 @@
+{
+  "title": "Valid Parentheses",
+  "titleSlug": "valid-parentheses",
+  "frontendId": "20",
+  "difficulty": "Easy",
+  "language": "cpp",
+  "topicTags": [
+    "string",
+    "stack"
+  ],
+  "openedAt": "2026-06-04T10:17:55.762Z",
+  "lastModifiedAt": "2026-06-04T10:17:55.762Z"
+}

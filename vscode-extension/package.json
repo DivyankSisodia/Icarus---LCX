@@ -1,0 +1,70 @@
+{
+  "name": "lcx-vscode",
+  "displayName": "Icarus",
+  "description": "Icarus shows LeetCode problem statements and runs or submits solutions directly from VS Code.",
+  "version": "0.1.0",
+  "publisher": "personal",
+  "icon": "media/icarus.png",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:icarus-sidebar-view",
+    "onCommand:lcx.showProblemDescription",
+    "onCommand:lcx.run",
+    "onCommand:lcx.submit"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "icarus",
+          "title": "Icarus",
+          "icon": "media/icarus.svg"
+        }
+      ]
+    },
+    "views": {
+      "icarus": [
+        {
+          "type": "webview",
+          "id": "icarus-sidebar-view",
+          "name": "Icarus Problem",
+          "visibility": "visible",
+          "icon": "media/icarus.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "lcx.showProblemDescription",
+        "title": "Icarus: Show Problem Description"
+      },
+      {
+        "command": "lcx.run",
+        "title": "Icarus: Run Code"
+      },
+      {
+        "command": "lcx.submit",
+        "title": "Icarus: Submit Solution"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsup",
+    "watch": "tsup --watch"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/vscode": "^1.80.0",
+    "tsup": "^8.1.0",
+    "typescript": "^5.4.5"
+  }
+}

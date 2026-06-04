@@ -1,0 +1,13 @@
+{
+  "title": "Merge Two Sorted Lists",
+  "titleSlug": "merge-two-sorted-lists",
+  "frontendId": "21",
+  "difficulty": "Easy",
+  "language": "cpp",
+  "topicTags": [
+    "linked-list",
+    "recursion"
+  ],
+  "openedAt": "2026-06-04T10:27:08.684Z",
+  "lastModifiedAt": "2026-06-04T10:27:08.684Z"
+}

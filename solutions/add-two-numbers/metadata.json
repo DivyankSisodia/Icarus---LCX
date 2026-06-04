@@ -1,0 +1,14 @@
+{
+  "title": "Add Two Numbers",
+  "titleSlug": "add-two-numbers",
+  "frontendId": "2",
+  "difficulty": "Medium",
+  "language": "cpp",
+  "topicTags": [
+    "linked-list",
+    "math",
+    "recursion"
+  ],
+  "openedAt": "2026-06-04T09:42:27.223Z",
+  "lastModifiedAt": "2026-06-04T09:42:27.223Z"
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Maximum Erasure Value",
+  "titleSlug": "maximum-erasure-value",
+  "frontendId": "1695",
+  "difficulty": "Medium",
+  "language": "cpp",
+  "topicTags": [
+    "array",
+    "hash-table",
+    "sliding-window"
+  ],
+  "openedAt": "2026-06-04T11:17:18.926Z",
+  "lastModifiedAt": "2026-06-04T11:17:18.926Z"
+}

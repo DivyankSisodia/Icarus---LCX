@@ -1,0 +1,16 @@
+{
+  "title": "Trapping Rain Water",
+  "titleSlug": "trapping-rain-water",
+  "frontendId": "42",
+  "difficulty": "Hard",
+  "language": "cpp",
+  "topicTags": [
+    "array",
+    "two-pointers",
+    "dynamic-programming",
+    "stack",
+    "monotonic-stack"
+  ],
+  "openedAt": "2026-06-04T10:08:10.130Z",
+  "lastModifiedAt": "2026-06-04T10:08:10.130Z"
+}

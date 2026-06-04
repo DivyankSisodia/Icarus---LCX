@@ -1,0 +1,13 @@
+{
+  "title": "Sqrt(x)",
+  "titleSlug": "sqrtx",
+  "frontendId": "69",
+  "difficulty": "Easy",
+  "language": "cpp",
+  "topicTags": [
+    "math",
+    "binary-search"
+  ],
+  "openedAt": "2026-06-04T10:28:40.794Z",
+  "lastModifiedAt": "2026-06-04T10:28:40.794Z"
+}

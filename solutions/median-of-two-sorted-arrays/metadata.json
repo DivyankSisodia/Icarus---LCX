@@ -1,0 +1,14 @@
+{
+  "title": "Median of Two Sorted Arrays",
+  "titleSlug": "median-of-two-sorted-arrays",
+  "frontendId": "4",
+  "difficulty": "Hard",
+  "language": "cpp",
+  "topicTags": [
+    "array",
+    "binary-search",
+    "divide-and-conquer"
+  ],
+  "openedAt": "2026-06-04T11:26:33.204Z",
+  "lastModifiedAt": "2026-06-04T11:26:33.204Z"
+}

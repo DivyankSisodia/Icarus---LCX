@@ -1,0 +1,14 @@
+{
+  "title": "Longest Substring Without Repeating Characters",
+  "titleSlug": "longest-substring-without-repeating-characters",
+  "frontendId": "3",
+  "difficulty": "Medium",
+  "language": "cpp",
+  "topicTags": [
+    "hash-table",
+    "string",
+    "sliding-window"
+  ],
+  "openedAt": "2026-06-04T12:11:00.052Z",
+  "lastModifiedAt": "2026-06-04T12:11:00.052Z"
+}

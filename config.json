@@ -1,0 +1,12 @@
+{
+  "workspacePath": "~/LCX",
+  "defaultLanguage": "cpp",
+  "theme": "purple-terminal",
+  "runTarget": "leetcode",
+  "saveAttempts": true,
+  "saveAcceptedRun": true,
+  "saveAcceptedSubmit": true,
+  "autoOpenEditor": true,
+  "editorCommand": "code",
+  "cacheProblems": true
+}
