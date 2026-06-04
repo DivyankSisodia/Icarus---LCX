@@ -1,40 +1,22 @@
-export function getWebviewContent(problem: any | null): string {
+import {
+  EmptySidebarState,
+  getEmptyStateWebviewContent,
+} from "./sidebarEmptyState";
+
+export function getWebviewContent(
+  problem: any | null,
+  emptyState?: EmptySidebarState
+): string {
   if (!problem) {
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {
-                font-family: var(--vscode-editor-font-family, system-ui, sans-serif);
-                color: var(--vscode-foreground);
-                padding: 16px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 80vh;
-                text-align: center;
-            }
-            .icon {
-                font-size: 48px;
-                margin-bottom: 16px;
-                color: var(--vscode-textLink-foreground);
-                opacity: 0.6;
-            }
-            p {
-                font-size: 14px;
-                color: var(--vscode-descriptionForeground);
-            }
-        </style>
-    </head>
-    <body>
-        <div class="icon">💻</div>
-        <h3>No Active Solution File</h3>
-        <p>Open a LeetCode solution file (e.g. <code>solution.latest.cpp</code>) or use <code>lcx open &lt;slug&gt;</code> in the terminal to view problem details here.</p>
-    </body>
-    </html>`;
+    return getEmptyStateWebviewContent(
+      emptyState || {
+        mode: "home",
+        summary: null,
+        selectedCompany: null,
+        loadingLabel: null,
+        errorMessage: null,
+      }
+    );
   }
 
   const difficultyClass = problem.difficulty.toLowerCase();

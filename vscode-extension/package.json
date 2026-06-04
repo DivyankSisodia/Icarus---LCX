@@ -16,7 +16,9 @@
     "onView:icarus-sidebar-view",
     "onCommand:lcx.showProblemDescription",
     "onCommand:lcx.run",
-    "onCommand:lcx.submit"
+    "onCommand:lcx.submit",
+    "onCommand:lcx.showStats",
+    "onCommand:lcx.showCompanies"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -52,6 +54,14 @@
       {
         "command": "lcx.submit",
         "title": "Icarus: Submit Solution"
+      },
+      {
+        "command": "lcx.showStats",
+        "title": "Icarus: Show Stats"
+      },
+      {
+        "command": "lcx.showCompanies",
+        "title": "Icarus: Show Companies"
       }
     ]
   },

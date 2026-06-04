@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const LcxConfigSchema = z.object({
   workspacePath: z.string().default("~/LCX"),
+  companyWorkbookPath: z.string().default(""),
   defaultLanguage: z.string().default("cpp"),
   theme: z.string().default("purple-terminal"),
   runTarget: z.enum(["leetcode"]).default("leetcode"),
@@ -17,6 +18,7 @@ export type LcxConfig = z.infer<typeof LcxConfigSchema>;
 
 export const DEFAULT_CONFIG: LcxConfig = {
   workspacePath: "~/LCX",
+  companyWorkbookPath: "",
   defaultLanguage: "cpp",
   theme: "purple-terminal",
   runTarget: "leetcode",

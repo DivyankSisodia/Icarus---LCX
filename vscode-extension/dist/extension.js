@@ -85,54 +85,54 @@ var require_polyfills = __commonJS({
     }
     var chdir;
     module2.exports = patch;
-    function patch(fs2) {
+    function patch(fs3) {
       if (constants.hasOwnProperty("O_SYMLINK") && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
-        patchLchmod(fs2);
+        patchLchmod(fs3);
       }
-      if (!fs2.lutimes) {
-        patchLutimes(fs2);
+      if (!fs3.lutimes) {
+        patchLutimes(fs3);
       }
-      fs2.chown = chownFix(fs2.chown);
-      fs2.fchown = chownFix(fs2.fchown);
-      fs2.lchown = chownFix(fs2.lchown);
-      fs2.chmod = chmodFix(fs2.chmod);
-      fs2.fchmod = chmodFix(fs2.fchmod);
-      fs2.lchmod = chmodFix(fs2.lchmod);
-      fs2.chownSync = chownFixSync(fs2.chownSync);
-      fs2.fchownSync = chownFixSync(fs2.fchownSync);
-      fs2.lchownSync = chownFixSync(fs2.lchownSync);
-      fs2.chmodSync = chmodFixSync(fs2.chmodSync);
-      fs2.fchmodSync = chmodFixSync(fs2.fchmodSync);
-      fs2.lchmodSync = chmodFixSync(fs2.lchmodSync);
-      fs2.stat = statFix(fs2.stat);
-      fs2.fstat = statFix(fs2.fstat);
-      fs2.lstat = statFix(fs2.lstat);
-      fs2.statSync = statFixSync(fs2.statSync);
-      fs2.fstatSync = statFixSync(fs2.fstatSync);
-      fs2.lstatSync = statFixSync(fs2.lstatSync);
-      if (fs2.chmod && !fs2.lchmod) {
-        fs2.lchmod = function(path2, mode, cb) {
+      fs3.chown = chownFix(fs3.chown);
+      fs3.fchown = chownFix(fs3.fchown);
+      fs3.lchown = chownFix(fs3.lchown);
+      fs3.chmod = chmodFix(fs3.chmod);
+      fs3.fchmod = chmodFix(fs3.fchmod);
+      fs3.lchmod = chmodFix(fs3.lchmod);
+      fs3.chownSync = chownFixSync(fs3.chownSync);
+      fs3.fchownSync = chownFixSync(fs3.fchownSync);
+      fs3.lchownSync = chownFixSync(fs3.lchownSync);
+      fs3.chmodSync = chmodFixSync(fs3.chmodSync);
+      fs3.fchmodSync = chmodFixSync(fs3.fchmodSync);
+      fs3.lchmodSync = chmodFixSync(fs3.lchmodSync);
+      fs3.stat = statFix(fs3.stat);
+      fs3.fstat = statFix(fs3.fstat);
+      fs3.lstat = statFix(fs3.lstat);
+      fs3.statSync = statFixSync(fs3.statSync);
+      fs3.fstatSync = statFixSync(fs3.fstatSync);
+      fs3.lstatSync = statFixSync(fs3.lstatSync);
+      if (fs3.chmod && !fs3.lchmod) {
+        fs3.lchmod = function(path3, mode, cb) {
           if (cb) process.nextTick(cb);
         };
-        fs2.lchmodSync = function() {
+        fs3.lchmodSync = function() {
         };
       }
-      if (fs2.chown && !fs2.lchown) {
-        fs2.lchown = function(path2, uid, gid, cb) {
+      if (fs3.chown && !fs3.lchown) {
+        fs3.lchown = function(path3, uid, gid, cb) {
           if (cb) process.nextTick(cb);
         };
-        fs2.lchownSync = function() {
+        fs3.lchownSync = function() {
         };
       }
       if (platform === "win32") {
-        fs2.rename = typeof fs2.rename !== "function" ? fs2.rename : (function(fs$rename) {
+        fs3.rename = typeof fs3.rename !== "function" ? fs3.rename : (function(fs$rename) {
           function rename(from, to, cb) {
             var start = Date.now();
             var backoff = 0;
             fs$rename(from, to, function CB(er) {
               if (er && (er.code === "EACCES" || er.code === "EPERM" || er.code === "EBUSY") && Date.now() - start < 6e4) {
                 setTimeout(function() {
-                  fs2.stat(to, function(stater, st) {
+                  fs3.stat(to, function(stater, st) {
                     if (stater && stater.code === "ENOENT")
                       fs$rename(from, to, CB);
                     else
@@ -148,9 +148,9 @@ var require_polyfills = __commonJS({
           }
           if (Object.setPrototypeOf) Object.setPrototypeOf(rename, fs$rename);
           return rename;
-        })(fs2.rename);
+        })(fs3.rename);
       }
-      fs2.read = typeof fs2.read !== "function" ? fs2.read : (function(fs$read) {
+      fs3.read = typeof fs3.read !== "function" ? fs3.read : (function(fs$read) {
         function read(fd, buffer, offset, length, position, callback_) {
           var callback;
           if (callback_ && typeof callback_ === "function") {
@@ -158,22 +158,22 @@ var require_polyfills = __commonJS({
             callback = function(er, _, __) {
               if (er && er.code === "EAGAIN" && eagCounter < 10) {
                 eagCounter++;
-                return fs$read.call(fs2, fd, buffer, offset, length, position, callback);
+                return fs$read.call(fs3, fd, buffer, offset, length, position, callback);
               }
               callback_.apply(this, arguments);
             };
           }
-          return fs$read.call(fs2, fd, buffer, offset, length, position, callback);
+          return fs$read.call(fs3, fd, buffer, offset, length, position, callback);
         }
         if (Object.setPrototypeOf) Object.setPrototypeOf(read, fs$read);
         return read;
-      })(fs2.read);
-      fs2.readSync = typeof fs2.readSync !== "function" ? fs2.readSync : /* @__PURE__ */ (function(fs$readSync) {
+      })(fs3.read);
+      fs3.readSync = typeof fs3.readSync !== "function" ? fs3.readSync : /* @__PURE__ */ (function(fs$readSync) {
         return function(fd, buffer, offset, length, position) {
           var eagCounter = 0;
           while (true) {
             try {
-              return fs$readSync.call(fs2, fd, buffer, offset, length, position);
+              return fs$readSync.call(fs3, fd, buffer, offset, length, position);
             } catch (er) {
               if (er.code === "EAGAIN" && eagCounter < 10) {
                 eagCounter++;
@@ -183,11 +183,11 @@ var require_polyfills = __commonJS({
             }
           }
         };
-      })(fs2.readSync);
-      function patchLchmod(fs3) {
-        fs3.lchmod = function(path2, mode, callback) {
-          fs3.open(
-            path2,
+      })(fs3.readSync);
+      function patchLchmod(fs4) {
+        fs4.lchmod = function(path3, mode, callback) {
+          fs4.open(
+            path3,
             constants.O_WRONLY | constants.O_SYMLINK,
             mode,
             function(err, fd) {
@@ -195,80 +195,80 @@ var require_polyfills = __commonJS({
                 if (callback) callback(err);
                 return;
               }
-              fs3.fchmod(fd, mode, function(err2) {
-                fs3.close(fd, function(err22) {
+              fs4.fchmod(fd, mode, function(err2) {
+                fs4.close(fd, function(err22) {
                   if (callback) callback(err2 || err22);
                 });
               });
             }
           );
         };
-        fs3.lchmodSync = function(path2, mode) {
-          var fd = fs3.openSync(path2, constants.O_WRONLY | constants.O_SYMLINK, mode);
+        fs4.lchmodSync = function(path3, mode) {
+          var fd = fs4.openSync(path3, constants.O_WRONLY | constants.O_SYMLINK, mode);
           var threw = true;
           var ret;
           try {
-            ret = fs3.fchmodSync(fd, mode);
+            ret = fs4.fchmodSync(fd, mode);
             threw = false;
           } finally {
             if (threw) {
               try {
-                fs3.closeSync(fd);
+                fs4.closeSync(fd);
               } catch (er) {
               }
             } else {
-              fs3.closeSync(fd);
+              fs4.closeSync(fd);
             }
           }
           return ret;
         };
       }
-      function patchLutimes(fs3) {
-        if (constants.hasOwnProperty("O_SYMLINK") && fs3.futimes) {
-          fs3.lutimes = function(path2, at, mt, cb) {
-            fs3.open(path2, constants.O_SYMLINK, function(er, fd) {
+      function patchLutimes(fs4) {
+        if (constants.hasOwnProperty("O_SYMLINK") && fs4.futimes) {
+          fs4.lutimes = function(path3, at, mt, cb) {
+            fs4.open(path3, constants.O_SYMLINK, function(er, fd) {
               if (er) {
                 if (cb) cb(er);
                 return;
               }
-              fs3.futimes(fd, at, mt, function(er2) {
-                fs3.close(fd, function(er22) {
+              fs4.futimes(fd, at, mt, function(er2) {
+                fs4.close(fd, function(er22) {
                   if (cb) cb(er2 || er22);
                 });
               });
             });
           };
-          fs3.lutimesSync = function(path2, at, mt) {
-            var fd = fs3.openSync(path2, constants.O_SYMLINK);
+          fs4.lutimesSync = function(path3, at, mt) {
+            var fd = fs4.openSync(path3, constants.O_SYMLINK);
             var ret;
             var threw = true;
             try {
-              ret = fs3.futimesSync(fd, at, mt);
+              ret = fs4.futimesSync(fd, at, mt);
               threw = false;
             } finally {
               if (threw) {
                 try {
-                  fs3.closeSync(fd);
+                  fs4.closeSync(fd);
                 } catch (er) {
                 }
               } else {
-                fs3.closeSync(fd);
+                fs4.closeSync(fd);
               }
             }
             return ret;
           };
-        } else if (fs3.futimes) {
-          fs3.lutimes = function(_a, _b, _c, cb) {
+        } else if (fs4.futimes) {
+          fs4.lutimes = function(_a, _b, _c, cb) {
             if (cb) process.nextTick(cb);
           };
-          fs3.lutimesSync = function() {
+          fs4.lutimesSync = function() {
           };
         }
       }
       function chmodFix(orig) {
         if (!orig) return orig;
         return function(target, mode, cb) {
-          return orig.call(fs2, target, mode, function(er) {
+          return orig.call(fs3, target, mode, function(er) {
             if (chownErOk(er)) er = null;
             if (cb) cb.apply(this, arguments);
           });
@@ -278,7 +278,7 @@ var require_polyfills = __commonJS({
         if (!orig) return orig;
         return function(target, mode) {
           try {
-            return orig.call(fs2, target, mode);
+            return orig.call(fs3, target, mode);
           } catch (er) {
             if (!chownErOk(er)) throw er;
           }
@@ -287,7 +287,7 @@ var require_polyfills = __commonJS({
       function chownFix(orig) {
         if (!orig) return orig;
         return function(target, uid, gid, cb) {
-          return orig.call(fs2, target, uid, gid, function(er) {
+          return orig.call(fs3, target, uid, gid, function(er) {
             if (chownErOk(er)) er = null;
             if (cb) cb.apply(this, arguments);
           });
@@ -297,7 +297,7 @@ var require_polyfills = __commonJS({
         if (!orig) return orig;
         return function(target, uid, gid) {
           try {
-            return orig.call(fs2, target, uid, gid);
+            return orig.call(fs3, target, uid, gid);
           } catch (er) {
             if (!chownErOk(er)) throw er;
           }
@@ -317,13 +317,13 @@ var require_polyfills = __commonJS({
             }
             if (cb) cb.apply(this, arguments);
           }
-          return options ? orig.call(fs2, target, options, callback) : orig.call(fs2, target, callback);
+          return options ? orig.call(fs3, target, options, callback) : orig.call(fs3, target, callback);
         };
       }
       function statFixSync(orig) {
         if (!orig) return orig;
         return function(target, options) {
-          var stats = options ? orig.call(fs2, target, options) : orig.call(fs2, target);
+          var stats = options ? orig.call(fs3, target, options) : orig.call(fs3, target);
           if (stats) {
             if (stats.uid < 0) stats.uid += 4294967296;
             if (stats.gid < 0) stats.gid += 4294967296;
@@ -353,16 +353,16 @@ var require_legacy_streams = __commonJS({
     "use strict";
     var Stream = require("stream").Stream;
     module2.exports = legacy;
-    function legacy(fs2) {
+    function legacy(fs3) {
       return {
         ReadStream,
         WriteStream
       };
-      function ReadStream(path2, options) {
-        if (!(this instanceof ReadStream)) return new ReadStream(path2, options);
+      function ReadStream(path3, options) {
+        if (!(this instanceof ReadStream)) return new ReadStream(path3, options);
         Stream.call(this);
         var self = this;
-        this.path = path2;
+        this.path = path3;
         this.fd = null;
         this.readable = true;
         this.paused = false;
@@ -396,7 +396,7 @@ var require_legacy_streams = __commonJS({
           });
           return;
         }
-        fs2.open(this.path, this.flags, this.mode, function(err, fd) {
+        fs3.open(this.path, this.flags, this.mode, function(err, fd) {
           if (err) {
             self.emit("error", err);
             self.readable = false;
@@ -407,10 +407,10 @@ var require_legacy_streams = __commonJS({
           self._read();
         });
       }
-      function WriteStream(path2, options) {
-        if (!(this instanceof WriteStream)) return new WriteStream(path2, options);
+      function WriteStream(path3, options) {
+        if (!(this instanceof WriteStream)) return new WriteStream(path3, options);
         Stream.call(this);
-        this.path = path2;
+        this.path = path3;
         this.fd = null;
         this.writable = true;
         this.flags = "w";
@@ -435,7 +435,7 @@ var require_legacy_streams = __commonJS({
         this.busy = false;
         this._queue = [];
         if (this.fd === null) {
-          this._open = fs2.open;
+          this._open = fs3.open;
           this._queue.push([this._open, this.path, this.flags, this.mode, void 0]);
           this.flush();
         }
@@ -471,7 +471,7 @@ var require_clone = __commonJS({
 var require_graceful_fs = __commonJS({
   "../node_modules/graceful-fs/graceful-fs.js"(exports2, module2) {
     "use strict";
-    var fs2 = require("fs");
+    var fs3 = require("fs");
     var polyfills = require_polyfills();
     var legacy = require_legacy_streams();
     var clone = require_clone();
@@ -503,12 +503,12 @@ var require_graceful_fs = __commonJS({
         m = "GFS4: " + m.split(/\n/).join("\nGFS4: ");
         console.error(m);
       };
-    if (!fs2[gracefulQueue]) {
+    if (!fs3[gracefulQueue]) {
       queue = global[gracefulQueue] || [];
-      publishQueue(fs2, queue);
-      fs2.close = (function(fs$close) {
+      publishQueue(fs3, queue);
+      fs3.close = (function(fs$close) {
         function close(fd, cb) {
-          return fs$close.call(fs2, fd, function(err) {
+          return fs$close.call(fs3, fd, function(err) {
             if (!err) {
               resetQueue();
             }
@@ -520,48 +520,48 @@ var require_graceful_fs = __commonJS({
           value: fs$close
         });
         return close;
-      })(fs2.close);
-      fs2.closeSync = (function(fs$closeSync) {
+      })(fs3.close);
+      fs3.closeSync = (function(fs$closeSync) {
         function closeSync(fd) {
-          fs$closeSync.apply(fs2, arguments);
+          fs$closeSync.apply(fs3, arguments);
           resetQueue();
         }
         Object.defineProperty(closeSync, previousSymbol, {
           value: fs$closeSync
         });
         return closeSync;
-      })(fs2.closeSync);
+      })(fs3.closeSync);
       if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || "")) {
         process.on("exit", function() {
-          debug(fs2[gracefulQueue]);
-          require("assert").equal(fs2[gracefulQueue].length, 0);
+          debug(fs3[gracefulQueue]);
+          require("assert").equal(fs3[gracefulQueue].length, 0);
         });
       }
     }
     var queue;
     if (!global[gracefulQueue]) {
-      publishQueue(global, fs2[gracefulQueue]);
+      publishQueue(global, fs3[gracefulQueue]);
     }
-    module2.exports = patch(clone(fs2));
-    if (process.env.TEST_GRACEFUL_FS_GLOBAL_PATCH && !fs2.__patched) {
-      module2.exports = patch(fs2);
-      fs2.__patched = true;
+    module2.exports = patch(clone(fs3));
+    if (process.env.TEST_GRACEFUL_FS_GLOBAL_PATCH && !fs3.__patched) {
+      module2.exports = patch(fs3);
+      fs3.__patched = true;
     }
-    function patch(fs3) {
-      polyfills(fs3);
-      fs3.gracefulify = patch;
-      fs3.createReadStream = createReadStream;
-      fs3.createWriteStream = createWriteStream;
-      var fs$readFile = fs3.readFile;
-      fs3.readFile = readFile;
-      function readFile(path2, options, cb) {
+    function patch(fs4) {
+      polyfills(fs4);
+      fs4.gracefulify = patch;
+      fs4.createReadStream = createReadStream;
+      fs4.createWriteStream = createWriteStream;
+      var fs$readFile = fs4.readFile;
+      fs4.readFile = readFile;
+      function readFile(path3, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
-        return go$readFile(path2, options, cb);
-        function go$readFile(path3, options2, cb2, startTime) {
-          return fs$readFile(path3, options2, function(err) {
+        return go$readFile(path3, options, cb);
+        function go$readFile(path4, options2, cb2, startTime) {
+          return fs$readFile(path4, options2, function(err) {
             if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
-              enqueue([go$readFile, [path3, options2, cb2], err, startTime || Date.now(), Date.now()]);
+              enqueue([go$readFile, [path4, options2, cb2], err, startTime || Date.now(), Date.now()]);
             else {
               if (typeof cb2 === "function")
                 cb2.apply(this, arguments);
@@ -569,16 +569,16 @@ var require_graceful_fs = __commonJS({
           });
         }
       }
-      var fs$writeFile = fs3.writeFile;
-      fs3.writeFile = writeFile;
-      function writeFile(path2, data, options, cb) {
+      var fs$writeFile = fs4.writeFile;
+      fs4.writeFile = writeFile;
+      function writeFile(path3, data, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
-        return go$writeFile(path2, data, options, cb);
-        function go$writeFile(path3, data2, options2, cb2, startTime) {
-          return fs$writeFile(path3, data2, options2, function(err) {
+        return go$writeFile(path3, data, options, cb);
+        function go$writeFile(path4, data2, options2, cb2, startTime) {
+          return fs$writeFile(path4, data2, options2, function(err) {
             if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
-              enqueue([go$writeFile, [path3, data2, options2, cb2], err, startTime || Date.now(), Date.now()]);
+              enqueue([go$writeFile, [path4, data2, options2, cb2], err, startTime || Date.now(), Date.now()]);
             else {
               if (typeof cb2 === "function")
                 cb2.apply(this, arguments);
@@ -586,17 +586,17 @@ var require_graceful_fs = __commonJS({
           });
         }
       }
-      var fs$appendFile = fs3.appendFile;
+      var fs$appendFile = fs4.appendFile;
       if (fs$appendFile)
-        fs3.appendFile = appendFile;
-      function appendFile(path2, data, options, cb) {
+        fs4.appendFile = appendFile;
+      function appendFile(path3, data, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
-        return go$appendFile(path2, data, options, cb);
-        function go$appendFile(path3, data2, options2, cb2, startTime) {
-          return fs$appendFile(path3, data2, options2, function(err) {
+        return go$appendFile(path3, data, options, cb);
+        function go$appendFile(path4, data2, options2, cb2, startTime) {
+          return fs$appendFile(path4, data2, options2, function(err) {
             if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
-              enqueue([go$appendFile, [path3, data2, options2, cb2], err, startTime || Date.now(), Date.now()]);
+              enqueue([go$appendFile, [path4, data2, options2, cb2], err, startTime || Date.now(), Date.now()]);
             else {
               if (typeof cb2 === "function")
                 cb2.apply(this, arguments);
@@ -604,9 +604,9 @@ var require_graceful_fs = __commonJS({
           });
         }
       }
-      var fs$copyFile = fs3.copyFile;
+      var fs$copyFile = fs4.copyFile;
       if (fs$copyFile)
-        fs3.copyFile = copyFile;
+        fs4.copyFile = copyFile;
       function copyFile(src, dest, flags, cb) {
         if (typeof flags === "function") {
           cb = flags;
@@ -624,34 +624,34 @@ var require_graceful_fs = __commonJS({
           });
         }
       }
-      var fs$readdir = fs3.readdir;
-      fs3.readdir = readdir;
+      var fs$readdir = fs4.readdir;
+      fs4.readdir = readdir;
       var noReaddirOptionVersions = /^v[0-5]\./;
-      function readdir(path2, options, cb) {
+      function readdir(path3, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
-        var go$readdir = noReaddirOptionVersions.test(process.version) ? function go$readdir2(path3, options2, cb2, startTime) {
-          return fs$readdir(path3, fs$readdirCallback(
-            path3,
+        var go$readdir = noReaddirOptionVersions.test(process.version) ? function go$readdir2(path4, options2, cb2, startTime) {
+          return fs$readdir(path4, fs$readdirCallback(
+            path4,
             options2,
             cb2,
             startTime
           ));
-        } : function go$readdir2(path3, options2, cb2, startTime) {
-          return fs$readdir(path3, options2, fs$readdirCallback(
-            path3,
+        } : function go$readdir2(path4, options2, cb2, startTime) {
+          return fs$readdir(path4, options2, fs$readdirCallback(
+            path4,
             options2,
             cb2,
             startTime
           ));
         };
-        return go$readdir(path2, options, cb);
-        function fs$readdirCallback(path3, options2, cb2, startTime) {
+        return go$readdir(path3, options, cb);
+        function fs$readdirCallback(path4, options2, cb2, startTime) {
           return function(err, files) {
             if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
               enqueue([
                 go$readdir,
-                [path3, options2, cb2],
+                [path4, options2, cb2],
                 err,
                 startTime || Date.now(),
                 Date.now()
@@ -666,21 +666,21 @@ var require_graceful_fs = __commonJS({
         }
       }
       if (process.version.substr(0, 4) === "v0.8") {
-        var legStreams = legacy(fs3);
+        var legStreams = legacy(fs4);
         ReadStream = legStreams.ReadStream;
         WriteStream = legStreams.WriteStream;
       }
-      var fs$ReadStream = fs3.ReadStream;
+      var fs$ReadStream = fs4.ReadStream;
       if (fs$ReadStream) {
         ReadStream.prototype = Object.create(fs$ReadStream.prototype);
         ReadStream.prototype.open = ReadStream$open;
       }
-      var fs$WriteStream = fs3.WriteStream;
+      var fs$WriteStream = fs4.WriteStream;
       if (fs$WriteStream) {
         WriteStream.prototype = Object.create(fs$WriteStream.prototype);
         WriteStream.prototype.open = WriteStream$open;
       }
-      Object.defineProperty(fs3, "ReadStream", {
+      Object.defineProperty(fs4, "ReadStream", {
         get: function() {
           return ReadStream;
         },
@@ -690,7 +690,7 @@ var require_graceful_fs = __commonJS({
         enumerable: true,
         configurable: true
       });
-      Object.defineProperty(fs3, "WriteStream", {
+      Object.defineProperty(fs4, "WriteStream", {
         get: function() {
           return WriteStream;
         },
@@ -701,7 +701,7 @@ var require_graceful_fs = __commonJS({
         configurable: true
       });
       var FileReadStream = ReadStream;
-      Object.defineProperty(fs3, "FileReadStream", {
+      Object.defineProperty(fs4, "FileReadStream", {
         get: function() {
           return FileReadStream;
         },
@@ -712,7 +712,7 @@ var require_graceful_fs = __commonJS({
         configurable: true
       });
       var FileWriteStream = WriteStream;
-      Object.defineProperty(fs3, "FileWriteStream", {
+      Object.defineProperty(fs4, "FileWriteStream", {
         get: function() {
           return FileWriteStream;
         },
@@ -722,7 +722,7 @@ var require_graceful_fs = __commonJS({
         enumerable: true,
         configurable: true
       });
-      function ReadStream(path2, options) {
+      function ReadStream(path3, options) {
         if (this instanceof ReadStream)
           return fs$ReadStream.apply(this, arguments), this;
         else
@@ -742,7 +742,7 @@ var require_graceful_fs = __commonJS({
           }
         });
       }
-      function WriteStream(path2, options) {
+      function WriteStream(path3, options) {
         if (this instanceof WriteStream)
           return fs$WriteStream.apply(this, arguments), this;
         else
@@ -760,22 +760,22 @@ var require_graceful_fs = __commonJS({
           }
         });
       }
-      function createReadStream(path2, options) {
-        return new fs3.ReadStream(path2, options);
+      function createReadStream(path3, options) {
+        return new fs4.ReadStream(path3, options);
       }
-      function createWriteStream(path2, options) {
-        return new fs3.WriteStream(path2, options);
+      function createWriteStream(path3, options) {
+        return new fs4.WriteStream(path3, options);
       }
-      var fs$open = fs3.open;
-      fs3.open = open;
-      function open(path2, flags, mode, cb) {
+      var fs$open = fs4.open;
+      fs4.open = open;
+      function open(path3, flags, mode, cb) {
         if (typeof mode === "function")
           cb = mode, mode = null;
-        return go$open(path2, flags, mode, cb);
-        function go$open(path3, flags2, mode2, cb2, startTime) {
-          return fs$open(path3, flags2, mode2, function(err, fd) {
+        return go$open(path3, flags, mode, cb);
+        function go$open(path4, flags2, mode2, cb2, startTime) {
+          return fs$open(path4, flags2, mode2, function(err, fd) {
             if (err && (err.code === "EMFILE" || err.code === "ENFILE"))
-              enqueue([go$open, [path3, flags2, mode2, cb2], err, startTime || Date.now(), Date.now()]);
+              enqueue([go$open, [path4, flags2, mode2, cb2], err, startTime || Date.now(), Date.now()]);
             else {
               if (typeof cb2 === "function")
                 cb2.apply(this, arguments);
@@ -783,20 +783,20 @@ var require_graceful_fs = __commonJS({
           });
         }
       }
-      return fs3;
+      return fs4;
     }
     function enqueue(elem) {
       debug("ENQUEUE", elem[0].name, elem[1]);
-      fs2[gracefulQueue].push(elem);
+      fs3[gracefulQueue].push(elem);
       retry();
     }
     var retryTimer;
     function resetQueue() {
       var now = Date.now();
-      for (var i = 0; i < fs2[gracefulQueue].length; ++i) {
-        if (fs2[gracefulQueue][i].length > 2) {
-          fs2[gracefulQueue][i][3] = now;
-          fs2[gracefulQueue][i][4] = now;
+      for (var i = 0; i < fs3[gracefulQueue].length; ++i) {
+        if (fs3[gracefulQueue][i].length > 2) {
+          fs3[gracefulQueue][i][3] = now;
+          fs3[gracefulQueue][i][4] = now;
         }
       }
       retry();
@@ -804,9 +804,9 @@ var require_graceful_fs = __commonJS({
     function retry() {
       clearTimeout(retryTimer);
       retryTimer = void 0;
-      if (fs2[gracefulQueue].length === 0)
+      if (fs3[gracefulQueue].length === 0)
         return;
-      var elem = fs2[gracefulQueue].shift();
+      var elem = fs3[gracefulQueue].shift();
       var fn = elem[0];
       var args = elem[1];
       var err = elem[2];
@@ -828,7 +828,7 @@ var require_graceful_fs = __commonJS({
           debug("RETRY", fn.name, args);
           fn.apply(null, args.concat([startTime]));
         } else {
-          fs2[gracefulQueue].push(elem);
+          fs3[gracefulQueue].push(elem);
         }
       }
       if (retryTimer === void 0) {
@@ -843,7 +843,7 @@ var require_fs = __commonJS({
   "../node_modules/fs-extra/lib/fs/index.js"(exports2) {
     "use strict";
     var u = require_universalify().fromCallback;
-    var fs2 = require_graceful_fs();
+    var fs3 = require_graceful_fs();
     var api = [
       "access",
       "appendFile",
@@ -884,26 +884,26 @@ var require_fs = __commonJS({
       "utimes",
       "writeFile"
     ].filter((key) => {
-      return typeof fs2[key] === "function";
+      return typeof fs3[key] === "function";
     });
-    Object.assign(exports2, fs2);
+    Object.assign(exports2, fs3);
     api.forEach((method) => {
-      exports2[method] = u(fs2[method]);
+      exports2[method] = u(fs3[method]);
     });
     exports2.exists = function(filename, callback) {
       if (typeof callback === "function") {
-        return fs2.exists(filename, callback);
+        return fs3.exists(filename, callback);
       }
       return new Promise((resolve2) => {
-        return fs2.exists(filename, resolve2);
+        return fs3.exists(filename, resolve2);
       });
     };
     exports2.read = function(fd, buffer, offset, length, position, callback) {
       if (typeof callback === "function") {
-        return fs2.read(fd, buffer, offset, length, position, callback);
+        return fs3.read(fd, buffer, offset, length, position, callback);
       }
       return new Promise((resolve2, reject) => {
-        fs2.read(fd, buffer, offset, length, position, (err, bytesRead, buffer2) => {
+        fs3.read(fd, buffer, offset, length, position, (err, bytesRead, buffer2) => {
           if (err) return reject(err);
           resolve2({ bytesRead, buffer: buffer2 });
         });
@@ -911,10 +911,10 @@ var require_fs = __commonJS({
     };
     exports2.write = function(fd, buffer, ...args) {
       if (typeof args[args.length - 1] === "function") {
-        return fs2.write(fd, buffer, ...args);
+        return fs3.write(fd, buffer, ...args);
       }
       return new Promise((resolve2, reject) => {
-        fs2.write(fd, buffer, ...args, (err, bytesWritten, buffer2) => {
+        fs3.write(fd, buffer, ...args, (err, bytesWritten, buffer2) => {
           if (err) return reject(err);
           resolve2({ bytesWritten, buffer: buffer2 });
         });
@@ -922,10 +922,10 @@ var require_fs = __commonJS({
     };
     exports2.readv = function(fd, buffers, ...args) {
       if (typeof args[args.length - 1] === "function") {
-        return fs2.readv(fd, buffers, ...args);
+        return fs3.readv(fd, buffers, ...args);
       }
       return new Promise((resolve2, reject) => {
-        fs2.readv(fd, buffers, ...args, (err, bytesRead, buffers2) => {
+        fs3.readv(fd, buffers, ...args, (err, bytesRead, buffers2) => {
           if (err) return reject(err);
           resolve2({ bytesRead, buffers: buffers2 });
         });
@@ -933,17 +933,17 @@ var require_fs = __commonJS({
     };
     exports2.writev = function(fd, buffers, ...args) {
       if (typeof args[args.length - 1] === "function") {
-        return fs2.writev(fd, buffers, ...args);
+        return fs3.writev(fd, buffers, ...args);
       }
       return new Promise((resolve2, reject) => {
-        fs2.writev(fd, buffers, ...args, (err, bytesWritten, buffers2) => {
+        fs3.writev(fd, buffers, ...args, (err, bytesWritten, buffers2) => {
           if (err) return reject(err);
           resolve2({ bytesWritten, buffers: buffers2 });
         });
       });
     };
-    if (typeof fs2.realpath.native === "function") {
-      exports2.realpath.native = u(fs2.realpath.native);
+    if (typeof fs3.realpath.native === "function") {
+      exports2.realpath.native = u(fs3.realpath.native);
     } else {
       process.emitWarning(
         "fs.realpath.native is not a function. Is fs being monkey-patched?",
@@ -958,10 +958,10 @@ var require_fs = __commonJS({
 var require_utils = __commonJS({
   "../node_modules/fs-extra/lib/mkdirs/utils.js"(exports2, module2) {
     "use strict";
-    var path2 = require("path");
+    var path3 = require("path");
     module2.exports.checkPath = function checkPath(pth) {
       if (process.platform === "win32") {
-        const pathHasInvalidWinCharacters = /[<>:"|?*]/.test(pth.replace(path2.parse(pth).root, ""));
+        const pathHasInvalidWinCharacters = /[<>:"|?*]/.test(pth.replace(path3.parse(pth).root, ""));
         if (pathHasInvalidWinCharacters) {
           const error = new Error(`Path contains invalid characters: ${pth}`);
           error.code = "EINVAL";
@@ -976,7 +976,7 @@ var require_utils = __commonJS({
 var require_make_dir = __commonJS({
   "../node_modules/fs-extra/lib/mkdirs/make-dir.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_fs();
+    var fs3 = require_fs();
     var { checkPath } = require_utils();
     var getMode = (options) => {
       const defaults = { mode: 511 };
@@ -985,14 +985,14 @@ var require_make_dir = __commonJS({
     };
     module2.exports.makeDir = async (dir, options) => {
       checkPath(dir);
-      return fs2.mkdir(dir, {
+      return fs3.mkdir(dir, {
         mode: getMode(options),
         recursive: true
       });
     };
     module2.exports.makeDirSync = (dir, options) => {
       checkPath(dir);
-      return fs2.mkdirSync(dir, {
+      return fs3.mkdirSync(dir, {
         mode: getMode(options),
         recursive: true
       });
@@ -1024,13 +1024,13 @@ var require_path_exists = __commonJS({
   "../node_modules/fs-extra/lib/path-exists/index.js"(exports2, module2) {
     "use strict";
     var u = require_universalify().fromPromise;
-    var fs2 = require_fs();
-    function pathExists(path2) {
-      return fs2.access(path2).then(() => true).catch(() => false);
+    var fs3 = require_fs();
+    function pathExists(path3) {
+      return fs3.access(path3).then(() => true).catch(() => false);
     }
     module2.exports = {
       pathExists: u(pathExists),
-      pathExistsSync: fs2.existsSync
+      pathExistsSync: fs3.existsSync
     };
   }
 });
@@ -1039,18 +1039,18 @@ var require_path_exists = __commonJS({
 var require_utimes = __commonJS({
   "../node_modules/fs-extra/lib/util/utimes.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_fs();
+    var fs3 = require_fs();
     var u = require_universalify().fromPromise;
-    async function utimesMillis(path2, atime, mtime) {
-      const fd = await fs2.open(path2, "r+");
+    async function utimesMillis(path3, atime, mtime) {
+      const fd = await fs3.open(path3, "r+");
       let error = null;
       try {
-        await fs2.futimes(fd, atime, mtime);
+        await fs3.futimes(fd, atime, mtime);
       } catch (futimesErr) {
         error = futimesErr;
       } finally {
         try {
-          await fs2.close(fd);
+          await fs3.close(fd);
         } catch (closeErr) {
           if (!error) error = closeErr;
         }
@@ -1059,16 +1059,16 @@ var require_utimes = __commonJS({
         throw error;
       }
     }
-    function utimesMillisSync(path2, atime, mtime) {
-      const fd = fs2.openSync(path2, "r+");
+    function utimesMillisSync(path3, atime, mtime) {
+      const fd = fs3.openSync(path3, "r+");
       let error = null;
       try {
-        fs2.futimesSync(fd, atime, mtime);
+        fs3.futimesSync(fd, atime, mtime);
       } catch (futimesErr) {
         error = futimesErr;
       } finally {
         try {
-          fs2.closeSync(fd);
+          fs3.closeSync(fd);
         } catch (closeErr) {
           if (!error) error = closeErr;
         }
@@ -1088,11 +1088,11 @@ var require_utimes = __commonJS({
 var require_stat = __commonJS({
   "../node_modules/fs-extra/lib/util/stat.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_fs();
-    var path2 = require("path");
+    var fs3 = require_fs();
+    var path3 = require("path");
     var u = require_universalify().fromPromise;
     function getStats(src, dest, opts) {
-      const statFunc = opts.dereference ? (file) => fs2.stat(file, { bigint: true }) : (file) => fs2.lstat(file, { bigint: true });
+      const statFunc = opts.dereference ? (file) => fs3.stat(file, { bigint: true }) : (file) => fs3.lstat(file, { bigint: true });
       return Promise.all([
         statFunc(src),
         statFunc(dest).catch((err) => {
@@ -1103,7 +1103,7 @@ var require_stat = __commonJS({
     }
     function getStatsSync(src, dest, opts) {
       let destStat;
-      const statFunc = opts.dereference ? (file) => fs2.statSync(file, { bigint: true }) : (file) => fs2.lstatSync(file, { bigint: true });
+      const statFunc = opts.dereference ? (file) => fs3.statSync(file, { bigint: true }) : (file) => fs3.lstatSync(file, { bigint: true });
       const srcStat = statFunc(src);
       try {
         destStat = statFunc(dest);
@@ -1117,8 +1117,8 @@ var require_stat = __commonJS({
       const { srcStat, destStat } = await getStats(src, dest, opts);
       if (destStat) {
         if (areIdentical(srcStat, destStat)) {
-          const srcBaseName = path2.basename(src);
-          const destBaseName = path2.basename(dest);
+          const srcBaseName = path3.basename(src);
+          const destBaseName = path3.basename(dest);
           if (funcName === "move" && srcBaseName !== destBaseName && srcBaseName.toLowerCase() === destBaseName.toLowerCase()) {
             return { srcStat, destStat, isChangingCase: true };
           }
@@ -1140,8 +1140,8 @@ var require_stat = __commonJS({
       const { srcStat, destStat } = getStatsSync(src, dest, opts);
       if (destStat) {
         if (areIdentical(srcStat, destStat)) {
-          const srcBaseName = path2.basename(src);
-          const destBaseName = path2.basename(dest);
+          const srcBaseName = path3.basename(src);
+          const destBaseName = path3.basename(dest);
           if (funcName === "move" && srcBaseName !== destBaseName && srcBaseName.toLowerCase() === destBaseName.toLowerCase()) {
             return { srcStat, destStat, isChangingCase: true };
           }
@@ -1160,12 +1160,12 @@ var require_stat = __commonJS({
       return { srcStat, destStat };
     }
     async function checkParentPaths(src, srcStat, dest, funcName) {
-      const srcParent = path2.resolve(path2.dirname(src));
-      const destParent = path2.resolve(path2.dirname(dest));
-      if (destParent === srcParent || destParent === path2.parse(destParent).root) return;
+      const srcParent = path3.resolve(path3.dirname(src));
+      const destParent = path3.resolve(path3.dirname(dest));
+      if (destParent === srcParent || destParent === path3.parse(destParent).root) return;
       let destStat;
       try {
-        destStat = await fs2.stat(destParent, { bigint: true });
+        destStat = await fs3.stat(destParent, { bigint: true });
       } catch (err) {
         if (err.code === "ENOENT") return;
         throw err;
@@ -1176,12 +1176,12 @@ var require_stat = __commonJS({
       return checkParentPaths(src, srcStat, destParent, funcName);
     }
     function checkParentPathsSync(src, srcStat, dest, funcName) {
-      const srcParent = path2.resolve(path2.dirname(src));
-      const destParent = path2.resolve(path2.dirname(dest));
-      if (destParent === srcParent || destParent === path2.parse(destParent).root) return;
+      const srcParent = path3.resolve(path3.dirname(src));
+      const destParent = path3.resolve(path3.dirname(dest));
+      if (destParent === srcParent || destParent === path3.parse(destParent).root) return;
       let destStat;
       try {
-        destStat = fs2.statSync(destParent, { bigint: true });
+        destStat = fs3.statSync(destParent, { bigint: true });
       } catch (err) {
         if (err.code === "ENOENT") return;
         throw err;
@@ -1195,8 +1195,8 @@ var require_stat = __commonJS({
       return destStat.ino !== void 0 && destStat.dev !== void 0 && destStat.ino === srcStat.ino && destStat.dev === srcStat.dev;
     }
     function isSrcSubdir(src, dest) {
-      const srcArr = path2.resolve(src).split(path2.sep).filter((i) => i);
-      const destArr = path2.resolve(dest).split(path2.sep).filter((i) => i);
+      const srcArr = path3.resolve(src).split(path3.sep).filter((i) => i);
+      const destArr = path3.resolve(dest).split(path3.sep).filter((i) => i);
       return srcArr.every((cur, i) => destArr[i] === cur);
     }
     function errMsg(src, dest, funcName) {
@@ -1248,8 +1248,8 @@ var require_async = __commonJS({
 var require_copy = __commonJS({
   "../node_modules/fs-extra/lib/copy/copy.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_fs();
-    var path2 = require("path");
+    var fs3 = require_fs();
+    var path3 = require("path");
     var { mkdirs } = require_mkdirs();
     var { pathExists } = require_path_exists();
     var { utimesMillis } = require_utimes();
@@ -1272,7 +1272,7 @@ var require_copy = __commonJS({
       await stat.checkParentPaths(src, srcStat, dest, "copy");
       const include = await runFilter(src, dest, opts);
       if (!include) return;
-      const destParent = path2.dirname(dest);
+      const destParent = path3.dirname(dest);
       const dirExists = await pathExists(destParent);
       if (!dirExists) {
         await mkdirs(destParent);
@@ -1284,7 +1284,7 @@ var require_copy = __commonJS({
       return opts.filter(src, dest);
     }
     async function getStatsAndPerformCopy(destStat, src, dest, opts) {
-      const statFn = opts.dereference ? fs2.stat : fs2.lstat;
+      const statFn = opts.dereference ? fs3.stat : fs3.lstat;
       const srcStat = await statFn(src);
       if (srcStat.isDirectory()) return onDir(srcStat, destStat, src, dest, opts);
       if (srcStat.isFile() || srcStat.isCharacterDevice() || srcStat.isBlockDevice()) return onFile(srcStat, destStat, src, dest, opts);
@@ -1296,7 +1296,7 @@ var require_copy = __commonJS({
     async function onFile(srcStat, destStat, src, dest, opts) {
       if (!destStat) return copyFile(srcStat, src, dest, opts);
       if (opts.overwrite) {
-        await fs2.unlink(dest);
+        await fs3.unlink(dest);
         return copyFile(srcStat, src, dest, opts);
       }
       if (opts.errorOnExist) {
@@ -1304,29 +1304,29 @@ var require_copy = __commonJS({
       }
     }
     async function copyFile(srcStat, src, dest, opts) {
-      await fs2.copyFile(src, dest);
+      await fs3.copyFile(src, dest);
       if (opts.preserveTimestamps) {
         if (fileIsNotWritable(srcStat.mode)) {
           await makeFileWritable(dest, srcStat.mode);
         }
-        const updatedSrcStat = await fs2.stat(src);
+        const updatedSrcStat = await fs3.stat(src);
         await utimesMillis(dest, updatedSrcStat.atime, updatedSrcStat.mtime);
       }
-      return fs2.chmod(dest, srcStat.mode);
+      return fs3.chmod(dest, srcStat.mode);
     }
     function fileIsNotWritable(srcMode) {
       return (srcMode & 128) === 0;
     }
     function makeFileWritable(dest, srcMode) {
-      return fs2.chmod(dest, srcMode | 128);
+      return fs3.chmod(dest, srcMode | 128);
     }
     async function onDir(srcStat, destStat, src, dest, opts) {
       if (!destStat) {
-        await fs2.mkdir(dest);
+        await fs3.mkdir(dest);
       }
-      await asyncIteratorConcurrentProcess(await fs2.opendir(src), async (item) => {
-        const srcItem = path2.join(src, item.name);
-        const destItem = path2.join(dest, item.name);
+      await asyncIteratorConcurrentProcess(await fs3.opendir(src), async (item) => {
+        const srcItem = path3.join(src, item.name);
+        const destItem = path3.join(dest, item.name);
         const include = await runFilter(srcItem, destItem, opts);
         if (include) {
           const { destStat: destStat2 } = await stat.checkPaths(srcItem, destItem, "copy", opts);
@@ -1334,26 +1334,26 @@ var require_copy = __commonJS({
         }
       });
       if (!destStat) {
-        await fs2.chmod(dest, srcStat.mode);
+        await fs3.chmod(dest, srcStat.mode);
       }
     }
     async function onLink(destStat, src, dest, opts) {
-      let resolvedSrc = await fs2.readlink(src);
+      let resolvedSrc = await fs3.readlink(src);
       if (opts.dereference) {
-        resolvedSrc = path2.resolve(process.cwd(), resolvedSrc);
+        resolvedSrc = path3.resolve(process.cwd(), resolvedSrc);
       }
       if (!destStat) {
-        return fs2.symlink(resolvedSrc, dest);
+        return fs3.symlink(resolvedSrc, dest);
       }
       let resolvedDest = null;
       try {
-        resolvedDest = await fs2.readlink(dest);
+        resolvedDest = await fs3.readlink(dest);
       } catch (e) {
-        if (e.code === "EINVAL" || e.code === "UNKNOWN") return fs2.symlink(resolvedSrc, dest);
+        if (e.code === "EINVAL" || e.code === "UNKNOWN") return fs3.symlink(resolvedSrc, dest);
         throw e;
       }
       if (opts.dereference) {
-        resolvedDest = path2.resolve(process.cwd(), resolvedDest);
+        resolvedDest = path3.resolve(process.cwd(), resolvedDest);
       }
       if (resolvedSrc !== resolvedDest) {
         if (stat.isSrcSubdir(resolvedSrc, resolvedDest)) {
@@ -1363,8 +1363,8 @@ var require_copy = __commonJS({
           throw new Error(`Cannot overwrite '${resolvedDest}' with '${resolvedSrc}'.`);
         }
       }
-      await fs2.unlink(dest);
-      return fs2.symlink(resolvedSrc, dest);
+      await fs3.unlink(dest);
+      return fs3.symlink(resolvedSrc, dest);
     }
     module2.exports = copy;
   }
@@ -1374,8 +1374,8 @@ var require_copy = __commonJS({
 var require_copy_sync = __commonJS({
   "../node_modules/fs-extra/lib/copy/copy-sync.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_graceful_fs();
-    var path2 = require("path");
+    var fs3 = require_graceful_fs();
+    var path3 = require("path");
     var mkdirsSync = require_mkdirs().mkdirsSync;
     var utimesMillisSync = require_utimes().utimesMillisSync;
     var stat = require_stat();
@@ -1396,12 +1396,12 @@ var require_copy_sync = __commonJS({
       const { srcStat, destStat } = stat.checkPathsSync(src, dest, "copy", opts);
       stat.checkParentPathsSync(src, srcStat, dest, "copy");
       if (opts.filter && !opts.filter(src, dest)) return;
-      const destParent = path2.dirname(dest);
-      if (!fs2.existsSync(destParent)) mkdirsSync(destParent);
+      const destParent = path3.dirname(dest);
+      if (!fs3.existsSync(destParent)) mkdirsSync(destParent);
       return getStats(destStat, src, dest, opts);
     }
     function getStats(destStat, src, dest, opts) {
-      const statSync = opts.dereference ? fs2.statSync : fs2.lstatSync;
+      const statSync = opts.dereference ? fs3.statSync : fs3.lstatSync;
       const srcStat = statSync(src);
       if (srcStat.isDirectory()) return onDir(srcStat, destStat, src, dest, opts);
       else if (srcStat.isFile() || srcStat.isCharacterDevice() || srcStat.isBlockDevice()) return onFile(srcStat, destStat, src, dest, opts);
@@ -1416,14 +1416,14 @@ var require_copy_sync = __commonJS({
     }
     function mayCopyFile(srcStat, src, dest, opts) {
       if (opts.overwrite) {
-        fs2.unlinkSync(dest);
+        fs3.unlinkSync(dest);
         return copyFile(srcStat, src, dest, opts);
       } else if (opts.errorOnExist) {
         throw new Error(`'${dest}' already exists`);
       }
     }
     function copyFile(srcStat, src, dest, opts) {
-      fs2.copyFileSync(src, dest);
+      fs3.copyFileSync(src, dest);
       if (opts.preserveTimestamps) handleTimestamps(srcStat.mode, src, dest);
       return setDestMode(dest, srcStat.mode);
     }
@@ -1438,10 +1438,10 @@ var require_copy_sync = __commonJS({
       return setDestMode(dest, srcMode | 128);
     }
     function setDestMode(dest, srcMode) {
-      return fs2.chmodSync(dest, srcMode);
+      return fs3.chmodSync(dest, srcMode);
     }
     function setDestTimestamps(src, dest) {
-      const updatedSrcStat = fs2.statSync(src);
+      const updatedSrcStat = fs3.statSync(src);
       return utimesMillisSync(dest, updatedSrcStat.atime, updatedSrcStat.mtime);
     }
     function onDir(srcStat, destStat, src, dest, opts) {
@@ -1449,12 +1449,12 @@ var require_copy_sync = __commonJS({
       return copyDir(src, dest, opts);
     }
     function mkDirAndCopy(srcMode, src, dest, opts) {
-      fs2.mkdirSync(dest);
+      fs3.mkdirSync(dest);
       copyDir(src, dest, opts);
       return setDestMode(dest, srcMode);
     }
     function copyDir(src, dest, opts) {
-      const dir = fs2.opendirSync(src);
+      const dir = fs3.opendirSync(src);
       try {
         let dirent;
         while ((dirent = dir.readSync()) !== null) {
@@ -1465,29 +1465,29 @@ var require_copy_sync = __commonJS({
       }
     }
     function copyDirItem(item, src, dest, opts) {
-      const srcItem = path2.join(src, item);
-      const destItem = path2.join(dest, item);
+      const srcItem = path3.join(src, item);
+      const destItem = path3.join(dest, item);
       if (opts.filter && !opts.filter(srcItem, destItem)) return;
       const { destStat } = stat.checkPathsSync(srcItem, destItem, "copy", opts);
       return getStats(destStat, srcItem, destItem, opts);
     }
     function onLink(destStat, src, dest, opts) {
-      let resolvedSrc = fs2.readlinkSync(src);
+      let resolvedSrc = fs3.readlinkSync(src);
       if (opts.dereference) {
-        resolvedSrc = path2.resolve(process.cwd(), resolvedSrc);
+        resolvedSrc = path3.resolve(process.cwd(), resolvedSrc);
       }
       if (!destStat) {
-        return fs2.symlinkSync(resolvedSrc, dest);
+        return fs3.symlinkSync(resolvedSrc, dest);
       } else {
         let resolvedDest;
         try {
-          resolvedDest = fs2.readlinkSync(dest);
+          resolvedDest = fs3.readlinkSync(dest);
         } catch (err) {
-          if (err.code === "EINVAL" || err.code === "UNKNOWN") return fs2.symlinkSync(resolvedSrc, dest);
+          if (err.code === "EINVAL" || err.code === "UNKNOWN") return fs3.symlinkSync(resolvedSrc, dest);
           throw err;
         }
         if (opts.dereference) {
-          resolvedDest = path2.resolve(process.cwd(), resolvedDest);
+          resolvedDest = path3.resolve(process.cwd(), resolvedDest);
         }
         if (resolvedSrc !== resolvedDest) {
           if (stat.isSrcSubdir(resolvedSrc, resolvedDest)) {
@@ -1501,8 +1501,8 @@ var require_copy_sync = __commonJS({
       }
     }
     function copyLink(resolvedSrc, dest) {
-      fs2.unlinkSync(dest);
-      return fs2.symlinkSync(resolvedSrc, dest);
+      fs3.unlinkSync(dest);
+      return fs3.symlinkSync(resolvedSrc, dest);
     }
     module2.exports = copySync;
   }
@@ -1524,13 +1524,13 @@ var require_copy2 = __commonJS({
 var require_remove = __commonJS({
   "../node_modules/fs-extra/lib/remove/index.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_graceful_fs();
+    var fs3 = require_graceful_fs();
     var u = require_universalify().fromCallback;
-    function remove(path2, callback) {
-      fs2.rm(path2, { recursive: true, force: true }, callback);
+    function remove(path3, callback) {
+      fs3.rm(path3, { recursive: true, force: true }, callback);
     }
-    function removeSync(path2) {
-      fs2.rmSync(path2, { recursive: true, force: true });
+    function removeSync(path3) {
+      fs3.rmSync(path3, { recursive: true, force: true });
     }
     module2.exports = {
       remove: u(remove),
@@ -1544,28 +1544,28 @@ var require_empty = __commonJS({
   "../node_modules/fs-extra/lib/empty/index.js"(exports2, module2) {
     "use strict";
     var u = require_universalify().fromPromise;
-    var fs2 = require_fs();
-    var path2 = require("path");
+    var fs3 = require_fs();
+    var path3 = require("path");
     var mkdir = require_mkdirs();
     var remove = require_remove();
     var emptyDir = u(async function emptyDir2(dir) {
       let items;
       try {
-        items = await fs2.readdir(dir);
+        items = await fs3.readdir(dir);
       } catch {
         return mkdir.mkdirs(dir);
       }
-      return Promise.all(items.map((item) => remove.remove(path2.join(dir, item))));
+      return Promise.all(items.map((item) => remove.remove(path3.join(dir, item))));
     });
     function emptyDirSync(dir) {
       let items;
       try {
-        items = fs2.readdirSync(dir);
+        items = fs3.readdirSync(dir);
       } catch {
         return mkdir.mkdirsSync(dir);
       }
       items.forEach((item) => {
-        item = path2.join(dir, item);
+        item = path3.join(dir, item);
         remove.removeSync(item);
       });
     }
@@ -1583,52 +1583,52 @@ var require_file = __commonJS({
   "../node_modules/fs-extra/lib/ensure/file.js"(exports2, module2) {
     "use strict";
     var u = require_universalify().fromPromise;
-    var path2 = require("path");
-    var fs2 = require_fs();
+    var path3 = require("path");
+    var fs3 = require_fs();
     var mkdir = require_mkdirs();
     async function createFile(file) {
       let stats;
       try {
-        stats = await fs2.stat(file);
+        stats = await fs3.stat(file);
       } catch {
       }
       if (stats && stats.isFile()) return;
-      const dir = path2.dirname(file);
+      const dir = path3.dirname(file);
       let dirStats = null;
       try {
-        dirStats = await fs2.stat(dir);
+        dirStats = await fs3.stat(dir);
       } catch (err) {
         if (err.code === "ENOENT") {
           await mkdir.mkdirs(dir);
-          await fs2.writeFile(file, "");
+          await fs3.writeFile(file, "");
           return;
         } else {
           throw err;
         }
       }
       if (dirStats.isDirectory()) {
-        await fs2.writeFile(file, "");
+        await fs3.writeFile(file, "");
       } else {
-        await fs2.readdir(dir);
+        await fs3.readdir(dir);
       }
     }
     function createFileSync(file) {
       let stats;
       try {
-        stats = fs2.statSync(file);
+        stats = fs3.statSync(file);
       } catch {
       }
       if (stats && stats.isFile()) return;
-      const dir = path2.dirname(file);
+      const dir = path3.dirname(file);
       try {
-        if (!fs2.statSync(dir).isDirectory()) {
-          fs2.readdirSync(dir);
+        if (!fs3.statSync(dir).isDirectory()) {
+          fs3.readdirSync(dir);
         }
       } catch (err) {
         if (err && err.code === "ENOENT") mkdir.mkdirsSync(dir);
         else throw err;
       }
-      fs2.writeFileSync(file, "");
+      fs3.writeFileSync(file, "");
     }
     module2.exports = {
       createFile: u(createFile),
@@ -1642,50 +1642,50 @@ var require_link = __commonJS({
   "../node_modules/fs-extra/lib/ensure/link.js"(exports2, module2) {
     "use strict";
     var u = require_universalify().fromPromise;
-    var path2 = require("path");
-    var fs2 = require_fs();
+    var path3 = require("path");
+    var fs3 = require_fs();
     var mkdir = require_mkdirs();
     var { pathExists } = require_path_exists();
     var { areIdentical } = require_stat();
     async function createLink(srcpath, dstpath) {
       let dstStat;
       try {
-        dstStat = await fs2.lstat(dstpath, { bigint: true });
+        dstStat = await fs3.lstat(dstpath, { bigint: true });
       } catch {
       }
       let srcStat;
       try {
-        srcStat = await fs2.lstat(srcpath, { bigint: true });
+        srcStat = await fs3.lstat(srcpath, { bigint: true });
       } catch (err) {
         err.message = err.message.replace("lstat", "ensureLink");
         throw err;
       }
       if (dstStat && areIdentical(srcStat, dstStat)) return;
-      const dir = path2.dirname(dstpath);
+      const dir = path3.dirname(dstpath);
       const dirExists = await pathExists(dir);
       if (!dirExists) {
         await mkdir.mkdirs(dir);
       }
-      await fs2.link(srcpath, dstpath);
+      await fs3.link(srcpath, dstpath);
     }
     function createLinkSync(srcpath, dstpath) {
       let dstStat;
       try {
-        dstStat = fs2.lstatSync(dstpath, { bigint: true });
+        dstStat = fs3.lstatSync(dstpath, { bigint: true });
       } catch {
       }
       try {
-        const srcStat = fs2.lstatSync(srcpath, { bigint: true });
+        const srcStat = fs3.lstatSync(srcpath, { bigint: true });
         if (dstStat && areIdentical(srcStat, dstStat)) return;
       } catch (err) {
         err.message = err.message.replace("lstat", "ensureLink");
         throw err;
       }
-      const dir = path2.dirname(dstpath);
-      const dirExists = fs2.existsSync(dir);
-      if (dirExists) return fs2.linkSync(srcpath, dstpath);
+      const dir = path3.dirname(dstpath);
+      const dirExists = fs3.existsSync(dir);
+      if (dirExists) return fs3.linkSync(srcpath, dstpath);
       mkdir.mkdirsSync(dir);
-      return fs2.linkSync(srcpath, dstpath);
+      return fs3.linkSync(srcpath, dstpath);
     }
     module2.exports = {
       createLink: u(createLink),
@@ -1698,14 +1698,14 @@ var require_link = __commonJS({
 var require_symlink_paths = __commonJS({
   "../node_modules/fs-extra/lib/ensure/symlink-paths.js"(exports2, module2) {
     "use strict";
-    var path2 = require("path");
-    var fs2 = require_fs();
+    var path3 = require("path");
+    var fs3 = require_fs();
     var { pathExists } = require_path_exists();
     var u = require_universalify().fromPromise;
     async function symlinkPaths(srcpath, dstpath) {
-      if (path2.isAbsolute(srcpath)) {
+      if (path3.isAbsolute(srcpath)) {
         try {
-          await fs2.lstat(srcpath);
+          await fs3.lstat(srcpath);
         } catch (err) {
           err.message = err.message.replace("lstat", "ensureSymlink");
           throw err;
@@ -1715,8 +1715,8 @@ var require_symlink_paths = __commonJS({
           toDst: srcpath
         };
       }
-      const dstdir = path2.dirname(dstpath);
-      const relativeToDst = path2.join(dstdir, srcpath);
+      const dstdir = path3.dirname(dstpath);
+      const relativeToDst = path3.join(dstdir, srcpath);
       const exists = await pathExists(relativeToDst);
       if (exists) {
         return {
@@ -1725,39 +1725,39 @@ var require_symlink_paths = __commonJS({
         };
       }
       try {
-        await fs2.lstat(srcpath);
+        await fs3.lstat(srcpath);
       } catch (err) {
         err.message = err.message.replace("lstat", "ensureSymlink");
         throw err;
       }
       return {
         toCwd: srcpath,
-        toDst: path2.relative(dstdir, srcpath)
+        toDst: path3.relative(dstdir, srcpath)
       };
     }
     function symlinkPathsSync(srcpath, dstpath) {
-      if (path2.isAbsolute(srcpath)) {
-        const exists2 = fs2.existsSync(srcpath);
+      if (path3.isAbsolute(srcpath)) {
+        const exists2 = fs3.existsSync(srcpath);
         if (!exists2) throw new Error("absolute srcpath does not exist");
         return {
           toCwd: srcpath,
           toDst: srcpath
         };
       }
-      const dstdir = path2.dirname(dstpath);
-      const relativeToDst = path2.join(dstdir, srcpath);
-      const exists = fs2.existsSync(relativeToDst);
+      const dstdir = path3.dirname(dstpath);
+      const relativeToDst = path3.join(dstdir, srcpath);
+      const exists = fs3.existsSync(relativeToDst);
       if (exists) {
         return {
           toCwd: relativeToDst,
           toDst: srcpath
         };
       }
-      const srcExists = fs2.existsSync(srcpath);
+      const srcExists = fs3.existsSync(srcpath);
       if (!srcExists) throw new Error("relative srcpath does not exist");
       return {
         toCwd: srcpath,
-        toDst: path2.relative(dstdir, srcpath)
+        toDst: path3.relative(dstdir, srcpath)
       };
     }
     module2.exports = {
@@ -1771,13 +1771,13 @@ var require_symlink_paths = __commonJS({
 var require_symlink_type = __commonJS({
   "../node_modules/fs-extra/lib/ensure/symlink-type.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_fs();
+    var fs3 = require_fs();
     var u = require_universalify().fromPromise;
     async function symlinkType(srcpath, type) {
       if (type) return type;
       let stats;
       try {
-        stats = await fs2.lstat(srcpath);
+        stats = await fs3.lstat(srcpath);
       } catch {
         return "file";
       }
@@ -1787,7 +1787,7 @@ var require_symlink_type = __commonJS({
       if (type) return type;
       let stats;
       try {
-        stats = fs2.lstatSync(srcpath);
+        stats = fs3.lstatSync(srcpath);
       } catch {
         return "file";
       }
@@ -1805,8 +1805,8 @@ var require_symlink = __commonJS({
   "../node_modules/fs-extra/lib/ensure/symlink.js"(exports2, module2) {
     "use strict";
     var u = require_universalify().fromPromise;
-    var path2 = require("path");
-    var fs2 = require_fs();
+    var path3 = require("path");
+    var fs3 = require_fs();
     var { mkdirs, mkdirsSync } = require_mkdirs();
     var { symlinkPaths, symlinkPathsSync } = require_symlink_paths();
     var { symlinkType, symlinkTypeSync } = require_symlink_type();
@@ -1815,64 +1815,64 @@ var require_symlink = __commonJS({
     async function createSymlink(srcpath, dstpath, type) {
       let stats;
       try {
-        stats = await fs2.lstat(dstpath);
+        stats = await fs3.lstat(dstpath);
       } catch {
       }
       if (stats && stats.isSymbolicLink()) {
         let srcStat;
-        if (path2.isAbsolute(srcpath)) {
-          srcStat = await fs2.stat(srcpath, { bigint: true });
+        if (path3.isAbsolute(srcpath)) {
+          srcStat = await fs3.stat(srcpath, { bigint: true });
         } else {
-          const dstdir = path2.dirname(dstpath);
-          const relativeToDst = path2.join(dstdir, srcpath);
+          const dstdir = path3.dirname(dstpath);
+          const relativeToDst = path3.join(dstdir, srcpath);
           try {
-            srcStat = await fs2.stat(relativeToDst, { bigint: true });
+            srcStat = await fs3.stat(relativeToDst, { bigint: true });
           } catch {
-            srcStat = await fs2.stat(srcpath, { bigint: true });
+            srcStat = await fs3.stat(srcpath, { bigint: true });
           }
         }
-        const dstStat = await fs2.stat(dstpath, { bigint: true });
+        const dstStat = await fs3.stat(dstpath, { bigint: true });
         if (areIdentical(srcStat, dstStat)) return;
       }
       const relative = await symlinkPaths(srcpath, dstpath);
       srcpath = relative.toDst;
       const toType = await symlinkType(relative.toCwd, type);
-      const dir = path2.dirname(dstpath);
+      const dir = path3.dirname(dstpath);
       if (!await pathExists(dir)) {
         await mkdirs(dir);
       }
-      return fs2.symlink(srcpath, dstpath, toType);
+      return fs3.symlink(srcpath, dstpath, toType);
     }
     function createSymlinkSync(srcpath, dstpath, type) {
       let stats;
       try {
-        stats = fs2.lstatSync(dstpath);
+        stats = fs3.lstatSync(dstpath);
       } catch {
       }
       if (stats && stats.isSymbolicLink()) {
         let srcStat;
-        if (path2.isAbsolute(srcpath)) {
-          srcStat = fs2.statSync(srcpath, { bigint: true });
+        if (path3.isAbsolute(srcpath)) {
+          srcStat = fs3.statSync(srcpath, { bigint: true });
         } else {
-          const dstdir = path2.dirname(dstpath);
-          const relativeToDst = path2.join(dstdir, srcpath);
+          const dstdir = path3.dirname(dstpath);
+          const relativeToDst = path3.join(dstdir, srcpath);
           try {
-            srcStat = fs2.statSync(relativeToDst, { bigint: true });
+            srcStat = fs3.statSync(relativeToDst, { bigint: true });
           } catch {
-            srcStat = fs2.statSync(srcpath, { bigint: true });
+            srcStat = fs3.statSync(srcpath, { bigint: true });
           }
         }
-        const dstStat = fs2.statSync(dstpath, { bigint: true });
+        const dstStat = fs3.statSync(dstpath, { bigint: true });
         if (areIdentical(srcStat, dstStat)) return;
       }
       const relative = symlinkPathsSync(srcpath, dstpath);
       srcpath = relative.toDst;
       type = symlinkTypeSync(relative.toCwd, type);
-      const dir = path2.dirname(dstpath);
-      const exists = fs2.existsSync(dir);
-      if (exists) return fs2.symlinkSync(srcpath, dstpath, type);
+      const dir = path3.dirname(dstpath);
+      const exists = fs3.existsSync(dir);
+      if (exists) return fs3.symlinkSync(srcpath, dstpath, type);
       mkdirsSync(dir);
-      return fs2.symlinkSync(srcpath, dstpath, type);
+      return fs3.symlinkSync(srcpath, dstpath, type);
     }
     module2.exports = {
       createSymlink: u(createSymlink),
@@ -1944,9 +1944,9 @@ var require_jsonfile = __commonJS({
       if (typeof options === "string") {
         options = { encoding: options };
       }
-      const fs2 = options.fs || _fs;
+      const fs3 = options.fs || _fs;
       const shouldThrow = "throws" in options ? options.throws : true;
-      let data = await universalify.fromCallback(fs2.readFile)(file, options);
+      let data = await universalify.fromCallback(fs3.readFile)(file, options);
       data = stripBom(data);
       let obj;
       try {
@@ -1966,10 +1966,10 @@ var require_jsonfile = __commonJS({
       if (typeof options === "string") {
         options = { encoding: options };
       }
-      const fs2 = options.fs || _fs;
+      const fs3 = options.fs || _fs;
       const shouldThrow = "throws" in options ? options.throws : true;
       try {
-        let content = fs2.readFileSync(file, options);
+        let content = fs3.readFileSync(file, options);
         content = stripBom(content);
         return JSON.parse(content, options.reviver);
       } catch (err) {
@@ -1982,15 +1982,15 @@ var require_jsonfile = __commonJS({
       }
     }
     async function _writeFile(file, obj, options = {}) {
-      const fs2 = options.fs || _fs;
+      const fs3 = options.fs || _fs;
       const str = stringify(obj, options);
-      await universalify.fromCallback(fs2.writeFile)(file, str, options);
+      await universalify.fromCallback(fs3.writeFile)(file, str, options);
     }
     var writeFile = universalify.fromPromise(_writeFile);
     function writeFileSync(file, obj, options = {}) {
-      const fs2 = options.fs || _fs;
+      const fs3 = options.fs || _fs;
       const str = stringify(obj, options);
-      return fs2.writeFileSync(file, str, options);
+      return fs3.writeFileSync(file, str, options);
     }
     module2.exports = {
       readFile,
@@ -2021,23 +2021,23 @@ var require_output_file = __commonJS({
   "../node_modules/fs-extra/lib/output-file/index.js"(exports2, module2) {
     "use strict";
     var u = require_universalify().fromPromise;
-    var fs2 = require_fs();
-    var path2 = require("path");
+    var fs3 = require_fs();
+    var path3 = require("path");
     var mkdir = require_mkdirs();
     var pathExists = require_path_exists().pathExists;
     async function outputFile(file, data, encoding = "utf-8") {
-      const dir = path2.dirname(file);
+      const dir = path3.dirname(file);
       if (!await pathExists(dir)) {
         await mkdir.mkdirs(dir);
       }
-      return fs2.writeFile(file, data, encoding);
+      return fs3.writeFile(file, data, encoding);
     }
     function outputFileSync(file, ...args) {
-      const dir = path2.dirname(file);
-      if (!fs2.existsSync(dir)) {
+      const dir = path3.dirname(file);
+      if (!fs3.existsSync(dir)) {
         mkdir.mkdirsSync(dir);
       }
-      fs2.writeFileSync(file, ...args);
+      fs3.writeFileSync(file, ...args);
     }
     module2.exports = {
       outputFile: u(outputFile),
@@ -2096,8 +2096,8 @@ var require_json = __commonJS({
 var require_move = __commonJS({
   "../node_modules/fs-extra/lib/move/move.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_fs();
-    var path2 = require("path");
+    var fs3 = require_fs();
+    var path3 = require("path");
     var { copy } = require_copy2();
     var { remove } = require_remove();
     var { mkdirp } = require_mkdirs();
@@ -2107,8 +2107,8 @@ var require_move = __commonJS({
       const overwrite = opts.overwrite || opts.clobber || false;
       const { srcStat, isChangingCase = false } = await stat.checkPaths(src, dest, "move", opts);
       await stat.checkParentPaths(src, srcStat, dest, "move");
-      const destParent = path2.dirname(dest);
-      const parsedParentPath = path2.parse(destParent);
+      const destParent = path3.dirname(dest);
+      const parsedParentPath = path3.parse(destParent);
       if (parsedParentPath.root !== destParent) {
         await mkdirp(destParent);
       }
@@ -2123,7 +2123,7 @@ var require_move = __commonJS({
         }
       }
       try {
-        await fs2.rename(src, dest);
+        await fs3.rename(src, dest);
       } catch (err) {
         if (err.code !== "EXDEV") {
           throw err;
@@ -2148,8 +2148,8 @@ var require_move = __commonJS({
 var require_move_sync = __commonJS({
   "../node_modules/fs-extra/lib/move/move-sync.js"(exports2, module2) {
     "use strict";
-    var fs2 = require_graceful_fs();
-    var path2 = require("path");
+    var fs3 = require_graceful_fs();
+    var path3 = require("path");
     var copySync = require_copy2().copySync;
     var removeSync = require_remove().removeSync;
     var mkdirpSync = require_mkdirs().mkdirpSync;
@@ -2159,12 +2159,12 @@ var require_move_sync = __commonJS({
       const overwrite = opts.overwrite || opts.clobber || false;
       const { srcStat, isChangingCase = false } = stat.checkPathsSync(src, dest, "move", opts);
       stat.checkParentPathsSync(src, srcStat, dest, "move");
-      if (!isParentRoot(dest)) mkdirpSync(path2.dirname(dest));
+      if (!isParentRoot(dest)) mkdirpSync(path3.dirname(dest));
       return doRename(src, dest, overwrite, isChangingCase);
     }
     function isParentRoot(dest) {
-      const parent = path2.dirname(dest);
-      const parsedPath = path2.parse(parent);
+      const parent = path3.dirname(dest);
+      const parsedPath = path3.parse(parent);
       return parsedPath.root === parent;
     }
     function doRename(src, dest, overwrite, isChangingCase) {
@@ -2173,12 +2173,12 @@ var require_move_sync = __commonJS({
         removeSync(dest);
         return rename(src, dest, overwrite);
       }
-      if (fs2.existsSync(dest)) throw new Error("dest already exists.");
+      if (fs3.existsSync(dest)) throw new Error("dest already exists.");
       return rename(src, dest, overwrite);
     }
     function rename(src, dest, overwrite) {
       try {
-        fs2.renameSync(src, dest);
+        fs3.renameSync(src, dest);
       } catch (err) {
         if (err.code !== "EXDEV") throw err;
         return moveAcrossDevice(src, dest, overwrite);
@@ -2237,49 +2237,519 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode = __toESM(require("vscode"));
-var path = __toESM(require("path"));
-var fs = __toESM(require_lib());
-var cp = __toESM(require("child_process"));
+var vscode2 = __toESM(require("vscode"));
+var path2 = __toESM(require("path"));
+var fs2 = __toESM(require_lib());
+var cp2 = __toESM(require("child_process"));
 
-// src/webview.ts
-function getWebviewContent(problem) {
-  if (!problem) {
-    return `<!DOCTYPE html>
-    <html lang="en">
+// src/sidebarEmptyState.ts
+function escapeHtml(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function formatNumber(value) {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+function renderHome(state) {
+  return `
+    <section class="hero-card">
+      <div class="hero-badge">Icarus Sidebar</div>
+      <h2>No Active Solution File</h2>
+      <p class="hero-copy">
+        Open a solution file to see full problem details, or browse company questions right here and open one into your workspace.
+      </p>
+      <div class="hero-actions">
+        <button class="primary-btn" data-action="browse-companies" type="button">
+          Browse Company Questions
+        </button>
+      </div>
+      <div class="hero-tip">
+        Terminal fallback: <code>lcx open &lt;slug&gt;</code>
+      </div>
+      ${state.summary ? `
+            <div class="summary-strip">
+              <span>${formatNumber(state.summary.companySheets.length)} companies</span>
+              <span>${formatNumber(state.summary.totalQuestions)} workbook entries</span>
+            </div>
+          ` : ""}
+    </section>
+  `;
+}
+function renderCompanyList(state) {
+  if (!state.summary) {
+    return `
+      <section class="panel-card">
+        <div class="empty-panel">Company workbook not loaded yet.</div>
+      </section>
+    `;
+  }
+  return `
+    <section class="panel-card">
+      <div class="panel-header">
+        <button class="back-btn" data-action="back-home" type="button">Back</button>
+        <div>
+          <div class="panel-title">Company Questions</div>
+          <div class="panel-subtitle">${formatNumber(state.summary.companySheets.length)} companies available</div>
+        </div>
+      </div>
+      <input
+        class="filter-input"
+        id="company-filter"
+        type="search"
+        placeholder="Filter companies"
+      />
+      <div class="company-list" id="company-list">
+        ${state.summary.companySheets.map(
+    (company) => `
+              <button
+                class="company-item"
+                data-company="${escapeHtml(company.name)}"
+                data-filter="${escapeHtml(company.name.toLowerCase())}"
+                type="button"
+              >
+                <span class="company-name">${escapeHtml(company.name)}</span>
+                <span class="company-meta">${company.companyQuestions} questions</span>
+              </button>
+            `
+  ).join("")}
+      </div>
+    </section>
+  `;
+}
+function renderProblemList(state) {
+  const company = state.selectedCompany;
+  if (!company) {
+    return `
+      <section class="panel-card">
+        <div class="empty-panel">Pick a company to view its questions.</div>
+      </section>
+    `;
+  }
+  return `
+    <section class="panel-card">
+      <div class="panel-header">
+        <button class="back-btn" data-action="back-companies" type="button">Back</button>
+        <div>
+          <div class="panel-title">${escapeHtml(company.name)}</div>
+          <div class="panel-subtitle">${company.companyQuestions} company questions</div>
+        </div>
+      </div>
+      <input
+        class="filter-input"
+        id="problem-filter"
+        type="search"
+        placeholder="Filter problems"
+      />
+      <div class="problem-list" id="problem-list">
+        ${company.questions.map(
+    (question) => `
+              <article
+                class="problem-item"
+                data-filter="${escapeHtml(`${question.title} ${question.slug}`.toLowerCase())}"
+              >
+                <div class="problem-copy">
+                  <div class="problem-title">
+                    ${question.isDailyQuestion ? '<span class="pill">Daily</span>' : ""}
+                    <span>${escapeHtml(question.title)}</span>
+                  </div>
+                  <div class="problem-meta">${escapeHtml(question.slug)}</div>
+                </div>
+                <button
+                  class="open-btn"
+                  data-problem="${escapeHtml(question.slug)}"
+                  type="button"
+                >
+                  Open
+                </button>
+              </article>
+            `
+  ).join("")}
+      </div>
+    </section>
+  `;
+}
+function renderError(state) {
+  if (!state.errorMessage) {
+    return "";
+  }
+  return `
+    <div class="error-card">
+      <div class="error-title">Could not load company questions</div>
+      <div class="error-body">${escapeHtml(state.errorMessage)}</div>
+    </div>
+  `;
+}
+function renderLoading(state) {
+  if (!state.loadingLabel) {
+    return "";
+  }
+  return `
+    <div class="loading-banner">
+      <span class="loading-dot"></span>
+      <span>${escapeHtml(state.loadingLabel)}</span>
+    </div>
+  `;
+}
+function getEmptyStateWebviewContent(state) {
+  const content = state.mode === "problems" ? renderProblemList(state) : state.mode === "companies" ? renderCompanyList(state) : renderHome(state);
+  return `<!DOCTYPE html>
+  <html lang="en">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {
-                font-family: var(--vscode-editor-font-family, system-ui, sans-serif);
-                color: var(--vscode-foreground);
-                padding: 16px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 80vh;
-                text-align: center;
-            }
-            .icon {
-                font-size: 48px;
-                margin-bottom: 16px;
-                color: var(--vscode-textLink-foreground);
-                opacity: 0.6;
-            }
-            p {
-                font-size: 14px;
-                color: var(--vscode-descriptionForeground);
-            }
-        </style>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <style>
+        :root {
+          --panel-bg: color-mix(in srgb, var(--vscode-sideBar-background) 90%, black);
+          --panel-card: color-mix(in srgb, var(--vscode-editor-background) 88%, transparent);
+          --panel-border: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+          --panel-text: var(--vscode-foreground);
+          --panel-muted: var(--vscode-descriptionForeground);
+          --panel-accent: #39a0ed;
+          --panel-accent-soft: rgba(57, 160, 237, 0.16);
+          --panel-green: #22c55e;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+          min-height: 100vh;
+          font-family: var(--vscode-font-family, system-ui, sans-serif);
+          background:
+            radial-gradient(circle at top, rgba(57, 160, 237, 0.14), transparent 30%),
+            linear-gradient(180deg, color-mix(in srgb, var(--panel-bg) 94%, black), var(--panel-bg));
+          color: var(--panel-text);
+          padding: 14px;
+        }
+
+        button,
+        input {
+          font: inherit;
+        }
+
+        .shell {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .hero-card,
+        .panel-card,
+        .error-card,
+        .loading-banner {
+          border: 1px solid var(--panel-border);
+          border-radius: 18px;
+          background: var(--panel-card);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
+        }
+
+        .hero-card,
+        .panel-card,
+        .error-card {
+          padding: 16px;
+        }
+
+        .hero-badge,
+        .panel-subtitle,
+        .hero-copy,
+        .hero-tip,
+        .company-meta,
+        .problem-meta,
+        .error-body {
+          color: var(--panel-muted);
+        }
+
+        .hero-badge {
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          font-size: 11px;
+          margin-bottom: 8px;
+        }
+
+        h2,
+        .panel-title {
+          margin: 0;
+          font-size: 18px;
+          line-height: 1.2;
+          font-weight: 700;
+        }
+
+        .hero-copy {
+          margin: 10px 0 0;
+          line-height: 1.55;
+          font-size: 13px;
+        }
+
+        .hero-actions {
+          margin-top: 16px;
+          display: flex;
+          gap: 10px;
+        }
+
+        .primary-btn,
+        .open-btn {
+          border: none;
+          border-radius: 12px;
+          background: linear-gradient(135deg, var(--panel-accent), #0ea5e9);
+          color: white;
+          cursor: pointer;
+          font-weight: 700;
+          transition: transform 120ms ease, opacity 120ms ease;
+        }
+
+        .primary-btn {
+          width: 100%;
+          padding: 12px 14px;
+        }
+
+        .open-btn {
+          flex: none;
+          padding: 8px 12px;
+        }
+
+        .primary-btn:hover,
+        .open-btn:hover,
+        .company-item:hover,
+        .back-btn:hover {
+          transform: translateY(-1px);
+        }
+
+        .hero-tip {
+          margin-top: 12px;
+          font-size: 12px;
+        }
+
+        code {
+          font-family: var(--vscode-editor-font-family, monospace);
+          background: color-mix(in srgb, var(--panel-card) 75%, black);
+          padding: 2px 5px;
+          border-radius: 6px;
+        }
+
+        .summary-strip {
+          margin-top: 14px;
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          font-size: 12px;
+          color: var(--panel-muted);
+          padding-top: 12px;
+          border-top: 1px solid var(--panel-border);
+        }
+
+        .panel-header {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+
+        .back-btn {
+          border: 1px solid var(--panel-border);
+          border-radius: 10px;
+          background: transparent;
+          color: var(--panel-text);
+          padding: 8px 10px;
+          cursor: pointer;
+          flex: none;
+        }
+
+        .filter-input {
+          width: 100%;
+          border: 1px solid var(--panel-border);
+          border-radius: 12px;
+          background: color-mix(in srgb, var(--panel-card) 82%, black);
+          color: var(--panel-text);
+          padding: 10px 12px;
+          margin-bottom: 12px;
+        }
+
+        .company-list,
+        .problem-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 68vh;
+          overflow-y: auto;
+        }
+
+        .company-item,
+        .problem-item {
+          width: 100%;
+          border: 1px solid var(--panel-border);
+          border-radius: 14px;
+          background: color-mix(in srgb, var(--panel-card) 78%, black);
+        }
+
+        .company-item {
+          padding: 12px 14px;
+          text-align: left;
+          color: var(--panel-text);
+          cursor: pointer;
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .company-name,
+        .problem-title {
+          font-weight: 600;
+        }
+
+        .problem-item {
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .problem-copy {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .problem-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .pill {
+          border-radius: 999px;
+          padding: 3px 7px;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          background: color-mix(in srgb, var(--panel-green) 22%, transparent);
+          color: #d4ffe2;
+        }
+
+        .problem-meta {
+          font-size: 12px;
+        }
+
+        .loading-banner {
+          padding: 10px 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: var(--panel-muted);
+          font-size: 12px;
+        }
+
+        .loading-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: var(--panel-accent);
+          box-shadow: 0 0 0 6px var(--panel-accent-soft);
+          animation: pulse 1s ease-in-out infinite;
+        }
+
+        .error-title {
+          font-weight: 700;
+          margin-bottom: 6px;
+        }
+
+        .empty-panel {
+          color: var(--panel-muted);
+          text-align: center;
+          padding: 16px 8px;
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(0.85); opacity: 0.75; }
+        }
+      </style>
     </head>
     <body>
-        <div class="icon">\u{1F4BB}</div>
-        <h3>No Active Solution File</h3>
-        <p>Open a LeetCode solution file (e.g. <code>solution.latest.cpp</code>) or use <code>lcx open &lt;slug&gt;</code> in the terminal to view problem details here.</p>
+      <div class="shell">
+        ${renderLoading(state)}
+        ${renderError(state)}
+        ${content}
+      </div>
+
+      <script>
+        const vscode = acquireVsCodeApi();
+
+        document.querySelector('[data-action="browse-companies"]')?.addEventListener('click', () => {
+          vscode.postMessage({ command: 'browseCompanies' });
+        });
+
+        document.querySelector('[data-action="back-home"]')?.addEventListener('click', () => {
+          vscode.postMessage({ command: 'backHome' });
+        });
+
+        document.querySelector('[data-action="back-companies"]')?.addEventListener('click', () => {
+          vscode.postMessage({ command: 'backCompanies' });
+        });
+
+        document.querySelectorAll('[data-company]').forEach((button) => {
+          button.addEventListener('click', () => {
+            vscode.postMessage({
+              command: 'selectCompany',
+              companyName: button.getAttribute('data-company'),
+            });
+          });
+        });
+
+        document.querySelectorAll('[data-problem]').forEach((button) => {
+          button.addEventListener('click', () => {
+            vscode.postMessage({
+              command: 'openProblem',
+              slug: button.getAttribute('data-problem'),
+            });
+          });
+        });
+
+        const companyFilter = document.getElementById('company-filter');
+        if (companyFilter) {
+          companyFilter.addEventListener('input', () => {
+            const term = companyFilter.value.trim().toLowerCase();
+            document.querySelectorAll('[data-company]').forEach((item) => {
+              const text = item.getAttribute('data-filter') || '';
+              item.style.display = text.includes(term) ? '' : 'none';
+            });
+          });
+        }
+
+        const problemFilter = document.getElementById('problem-filter');
+        if (problemFilter) {
+          problemFilter.addEventListener('input', () => {
+            const term = problemFilter.value.trim().toLowerCase();
+            document.querySelectorAll('[data-filter]').forEach((item) => {
+              if (!item.classList.contains('problem-item')) {
+                return;
+              }
+              const text = item.getAttribute('data-filter') || '';
+              item.style.display = text.includes(term) ? '' : 'none';
+            });
+          });
+        }
+      </script>
     </body>
-    </html>`;
+  </html>`;
+}
+
+// src/webview.ts
+function getWebviewContent(problem, emptyState) {
+  if (!problem) {
+    return getEmptyStateWebviewContent(
+      emptyState || {
+        mode: "home",
+        summary: null,
+        selectedCompany: null,
+        loadingLabel: null,
+        errorMessage: null
+      }
+    );
   }
   const difficultyClass = problem.difficulty.toLowerCase();
   const tagsHtml = (problem.topicTags || []).map((t) => `<span class="tag">${typeof t === "string" ? t : t.name}</span>`).join("");
@@ -2724,48 +3194,956 @@ function getWebviewContent(problem) {
   </html>`;
 }
 
-// src/extension.ts
-var activeProblem = null;
+// src/companyExplorer.ts
+var vscode = __toESM(require("vscode"));
+
+// src/cliRunner.ts
+var cp = __toESM(require("child_process"));
+var fs = __toESM(require_lib());
+var path = __toESM(require("path"));
 function stripAnsi(str) {
   return str.replace(
     /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
     ""
   );
 }
+function resolveCliPath() {
+  const candidates = [
+    path.resolve(__dirname, "..", "..", "dist", "index.js"),
+    "/Users/divyanksisodia/lcx/dist/index.js"
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  throw new Error(
+    `LCX CLI executable not found. Checked: ${candidates.join(", ")}`
+  );
+}
+async function runCliJsonCommand(args, cwd) {
+  const cliPath = resolveCliPath();
+  return await new Promise((resolve2, reject) => {
+    const child = cp.spawn("node", [cliPath, ...args], {
+      cwd,
+      env: { ...process.env, FORCE_COLOR: "0" }
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+    child.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+    child.on("error", (error) => {
+      reject(error);
+    });
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(
+          new Error(
+            stripAnsi(stderr.trim()) || `LCX command failed with exit code ${code ?? "unknown"}`
+          )
+        );
+        return;
+      }
+      try {
+        resolve2(JSON.parse(stdout.trim()));
+      } catch (error) {
+        reject(
+          new Error(
+            `Failed to parse LCX JSON output: ${error instanceof Error ? error.message : String(error)}`
+          )
+        );
+      }
+    });
+  });
+}
+
+// src/companyExplorer.ts
+function escapeHtml2(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function formatNumber2(value) {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+function badgeClass(kind) {
+  return kind === "company" ? "company" : "difficulty";
+}
+function renderStatsCards(stats) {
+  return `
+    <div class="stats-grid">
+      <div class="card stat-card accent-green">
+        <div class="label">Solved</div>
+        <div class="value">${formatNumber2(stats.solvedCount)}</div>
+        <div class="meta">${stats.solvedByDifficulty.Easy} Easy \xB7 ${stats.solvedByDifficulty.Medium} Medium \xB7 ${stats.solvedByDifficulty.Hard} Hard</div>
+      </div>
+      <div class="card stat-card accent-cyan">
+        <div class="label">Attempts</div>
+        <div class="value">${formatNumber2(stats.totalAttempts)}</div>
+        <div class="meta">Acceptance ${escapeHtml2(stats.acceptanceRate)}</div>
+      </div>
+      <div class="card stat-card accent-amber">
+        <div class="label">Most Attempted</div>
+        <div class="value">${stats.mostAttempted.length}</div>
+        <div class="meta">Tracked locally</div>
+      </div>
+    </div>
+  `;
+}
+function renderMostAttempted(stats) {
+  if (stats.mostAttempted.length === 0) {
+    return `<p class="empty-note">No attempt history yet.</p>`;
+  }
+  return `
+    <div class="mini-list">
+      ${stats.mostAttempted.map(
+    (item) => `
+            <div class="mini-row">
+              <div>
+                <div class="mini-title">${escapeHtml2(item.title)}</div>
+                <div class="mini-subtitle">${escapeHtml2(item.slug)}</div>
+              </div>
+              <div class="mini-pill">${item.count}x</div>
+            </div>
+          `
+  ).join("")}
+    </div>
+  `;
+}
+function renderRecentAccepted(stats) {
+  if (stats.recentAccepted.length === 0) {
+    return `<p class="empty-note">No accepted submissions yet.</p>`;
+  }
+  return `
+    <div class="mini-list">
+      ${stats.recentAccepted.map(
+    (item) => `
+            <div class="mini-row">
+              <div>
+                <div class="mini-title">${escapeHtml2(item.title)}</div>
+                <div class="mini-subtitle">${escapeHtml2(item.slug)}</div>
+              </div>
+              <div class="mini-pill success">Accepted</div>
+            </div>
+          `
+  ).join("")}
+    </div>
+  `;
+}
+function renderWorkbookCards(summary) {
+  return `
+    <div class="stats-grid">
+      <div class="card stat-card accent-violet">
+        <div class="label">Sheets</div>
+        <div class="value">${formatNumber2(summary.sheetCount)}</div>
+        <div class="meta">${summary.companySheets.length} company \xB7 ${summary.difficultySheets.length} difficulty</div>
+      </div>
+      <div class="card stat-card accent-blue">
+        <div class="label">Questions</div>
+        <div class="value">${formatNumber2(summary.totalQuestions)}</div>
+        <div class="meta">Across the workbook</div>
+      </div>
+      <div class="card stat-card accent-orange">
+        <div class="label">Company Sheets</div>
+        <div class="value">${formatNumber2(summary.companySheets.length)}</div>
+        <div class="meta">Browsable sheets</div>
+      </div>
+    </div>
+  `;
+}
+function renderSheetList(summary) {
+  return `
+    <div class="sheet-toolbar">
+      <input
+        class="search"
+        id="sheet-filter"
+        type="search"
+        placeholder="Filter companies or difficulty sheets"
+      />
+      <div class="sheet-hint">${formatNumber2(summary.sheets.length)} sheets</div>
+    </div>
+    <div class="sheet-grid" id="sheet-grid">
+      ${summary.sheets.map(
+    (sheet) => `
+            <button
+              class="sheet-card"
+              data-sheet="${escapeHtml2(sheet.name)}"
+              data-search="${escapeHtml2(`${sheet.name} ${sheet.kind} ${sheet.totalQuestions} ${sheet.companyQuestions} ${sheet.dailyQuestions}`.toLowerCase())}"
+              type="button"
+            >
+              <div class="sheet-card-header">
+                <span class="sheet-name">${escapeHtml2(sheet.name)}</span>
+                <span class="sheet-badge ${badgeClass(sheet.kind)}">${sheet.kind}</span>
+              </div>
+              <div class="sheet-count">${sheet.kind === "company" ? `${sheet.companyQuestions} company questions` : `${sheet.totalQuestions} questions`}</div>
+              ${sheet.dailyQuestions > 0 ? `<div class="sheet-meta">${sheet.dailyQuestions} daily question${sheet.dailyQuestions === 1 ? "" : "s"}</div>` : ""}
+            </button>
+          `
+  ).join("")}
+    </div>
+  `;
+}
+function renderSelectedSheet(sheet) {
+  return `
+    <div class="selected-sheet">
+      <div class="sheet-toolbar compact">
+        <div>
+          <div class="selected-title">${escapeHtml2(sheet.name)}</div>
+          <div class="selected-subtitle">${sheet.companyQuestions} company questions${sheet.dailyQuestions > 0 ? ` \xB7 ${sheet.dailyQuestions} daily` : ""}</div>
+        </div>
+        <div class="sheet-actions">
+          <input
+            class="search"
+            id="question-filter"
+            type="search"
+            placeholder="Filter questions"
+          />
+          <button class="ghost-button" data-action="back" type="button">Back</button>
+        </div>
+      </div>
+
+      <div class="question-list" id="question-list">
+        ${sheet.questions.map(
+    (question) => `
+              <article
+                class="question-row"
+                data-search="${escapeHtml2(`${question.title} ${question.slug} ${question.topic || ""} ${question.difficulty || ""}`.toLowerCase())}"
+              >
+                <div class="question-main">
+                  <div class="question-title">
+                    ${question.isDailyQuestion ? '<span class="sheet-badge daily">daily</span>' : ""}
+                    <span>${escapeHtml2(question.title)}</span>
+                  </div>
+                  <div class="question-meta">
+                    <span>${escapeHtml2(question.slug)}</span>
+                    ${question.topic ? `<span>${escapeHtml2(question.topic)}</span>` : ""}
+                    ${question.difficulty ? `<span>${escapeHtml2(question.difficulty)}</span>` : ""}
+                    <span>#${question.rowNumber}</span>
+                  </div>
+                </div>
+                <button class="open-link" data-url="${escapeHtml2(question.url)}" type="button">Open</button>
+              </article>
+            `
+  ).join("")}
+      </div>
+    </div>
+  `;
+}
+function renderError2(message) {
+  return `
+    <div class="error-card">
+      <div class="error-title">Workbook unavailable</div>
+      <div class="error-message">${escapeHtml2(message)}</div>
+      <div class="error-help">
+        Set the workbook path once with:
+        <code>lcx config set companyWorkbookPath /path/to/Leetcode problem set (company tag, sorted by freq).xlsx</code>
+      </div>
+    </div>
+  `;
+}
+function getCompanyExplorerContent(state) {
+  const hasData = Boolean(state.stats && state.summary);
+  const statsSection = state.stats ? `
+      <section class="panel-section" id="panel-stats" ${state.activeTab === "stats" ? "" : "hidden"}>
+        <div class="section-header">
+          <h2>Stats</h2>
+          <span class="section-chip">Local + workbook overview</span>
+        </div>
+        ${renderStatsCards(state.stats)}
+        <div class="card stack-card">
+          <h3>Attempted Problems</h3>
+          ${renderMostAttempted(state.stats)}
+        </div>
+        <div class="card stack-card">
+          <h3>Recent Accepted</h3>
+          ${renderRecentAccepted(state.stats)}
+        </div>
+      </section>
+    ` : "";
+  const companiesSection = state.summary ? `
+      <section class="panel-section" id="panel-companies" ${state.activeTab === "companies" ? "" : "hidden"}>
+        <div class="section-header">
+          <h2>Companies</h2>
+          <span class="section-chip">${formatNumber2(state.summary.companySheets.length)} company sheets</span>
+        </div>
+        ${renderWorkbookCards(state.summary)}
+        ${state.loadingSheet ? `<div class="loading-pill">Loading ${escapeHtml2(state.loadingSheet)}...</div>` : ""}
+        ${state.selectedSheet ? `<div class="card stack-card">${renderSelectedSheet(state.selectedSheet)}</div>` : `<div class="card stack-card">${renderSheetList(state.summary)}</div>`}
+      </section>
+    ` : "";
+  const title = state.errorMessage ? "LCX Workbook Explorer" : hasData ? `LCX Workbook Explorer \xB7 ${state.summary?.sheetCount ?? 0} sheets` : "LCX Workbook Explorer";
+  return `<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <style>
+        :root {
+          --bg: var(--vscode-sideBar-background);
+          --bg-elevated: color-mix(in srgb, var(--vscode-editor-background) 86%, transparent);
+          --border: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+          --text: var(--vscode-foreground);
+          --muted: var(--vscode-descriptionForeground);
+          --accent: var(--vscode-button-background);
+          --accent-strong: var(--vscode-button-hoverBackground);
+        }
+
+        body {
+          margin: 0;
+          padding: 18px;
+          background:
+            radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 14%, transparent), transparent 34%),
+            linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, black) 0%, var(--bg) 100%);
+          color: var(--text);
+          font-family: var(--vscode-font-family, system-ui, sans-serif);
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        button,
+        input {
+          font: inherit;
+        }
+
+        .shell {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .hero {
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          padding: 18px;
+          background: linear-gradient(135deg, color-mix(in srgb, var(--bg-elevated) 92%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+        }
+
+        .eyebrow {
+          text-transform: uppercase;
+          letter-spacing: 0.14em;
+          font-size: 11px;
+          color: var(--muted);
+          margin-bottom: 6px;
+        }
+
+        h1 {
+          margin: 0;
+          font-size: 22px;
+          line-height: 1.2;
+        }
+
+        .subtitle {
+          margin-top: 8px;
+          color: var(--muted);
+          font-size: 13px;
+        }
+
+        .tabs {
+          display: flex;
+          gap: 8px;
+          margin-top: 16px;
+          flex-wrap: wrap;
+        }
+
+        .tab-button,
+        .ghost-button {
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
+          color: var(--text);
+          padding: 8px 14px;
+          cursor: pointer;
+          transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+        }
+
+        .tab-button:hover,
+        .ghost-button:hover,
+        .sheet-card:hover,
+        .open-link:hover {
+          transform: translateY(-1px);
+          border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+        }
+
+        .tab-button.active {
+          background: color-mix(in srgb, var(--accent) 20%, var(--bg-elevated));
+          border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+        }
+
+        .panel-section {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .section-header h2,
+        .stack-card h3 {
+          margin: 0;
+          font-size: 16px;
+        }
+
+        .section-chip {
+          border-radius: 999px;
+          padding: 5px 10px;
+          border: 1px solid var(--border);
+          font-size: 12px;
+          color: var(--muted);
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 12px;
+        }
+
+        .card {
+          border: 1px solid var(--border);
+          border-radius: 18px;
+          background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+        }
+
+        .stat-card {
+          padding: 16px;
+        }
+
+        .stat-card .label {
+          color: var(--muted);
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+
+        .stat-card .value {
+          margin-top: 10px;
+          font-size: 28px;
+          font-weight: 700;
+        }
+
+        .stat-card .meta {
+          margin-top: 6px;
+          color: var(--muted);
+          font-size: 12px;
+        }
+
+        .accent-green { box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.14); }
+        .accent-cyan { box-shadow: inset 0 1px 0 rgba(6, 182, 212, 0.14); }
+        .accent-amber { box-shadow: inset 0 1px 0 rgba(245, 158, 11, 0.14); }
+        .accent-violet { box-shadow: inset 0 1px 0 rgba(139, 92, 246, 0.14); }
+        .accent-blue { box-shadow: inset 0 1px 0 rgba(59, 130, 246, 0.14); }
+        .accent-orange { box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.14); }
+
+        .stack-card {
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .mini-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .mini-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 14px;
+          border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+          background: color-mix(in srgb, var(--bg) 78%, transparent);
+        }
+
+        .mini-title,
+        .selected-title {
+          font-weight: 600;
+        }
+
+        .mini-subtitle,
+        .selected-subtitle,
+        .empty-note,
+        .sheet-meta,
+        .sheet-count {
+          color: var(--muted);
+          font-size: 12px;
+        }
+
+        .mini-pill,
+        .sheet-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          padding: 4px 8px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          border: 1px solid var(--border);
+          background: color-mix(in srgb, var(--accent) 10%, transparent);
+        }
+
+        .mini-pill.success,
+        .sheet-badge.company {
+          background: color-mix(in srgb, #22c55e 18%, transparent);
+        }
+
+        .sheet-badge.difficulty {
+          background: color-mix(in srgb, #f59e0b 18%, transparent);
+        }
+
+        .sheet-badge.daily {
+          background: color-mix(in srgb, #10b981 18%, transparent);
+        }
+
+        .sheet-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .sheet-toolbar.compact {
+          align-items: flex-start;
+        }
+
+        .search {
+          flex: 1;
+          min-width: 220px;
+          border-radius: 14px;
+          border: 1px solid var(--border);
+          background: color-mix(in srgb, var(--bg) 84%, transparent);
+          color: var(--text);
+          padding: 10px 12px;
+          outline: none;
+        }
+
+        .search:focus {
+          border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+        }
+
+        .sheet-hint {
+          color: var(--muted);
+          font-size: 12px;
+        }
+
+        .sheet-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 12px;
+        }
+
+        .sheet-card {
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 14px;
+          text-align: left;
+          background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+          color: var(--text);
+          cursor: pointer;
+          transition: transform 120ms ease, border-color 120ms ease;
+        }
+
+        .sheet-card-header,
+        .question-title,
+        .question-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .sheet-name {
+          font-weight: 600;
+        }
+
+        .sheet-count {
+          margin-top: 8px;
+        }
+
+        .question-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 60vh;
+          overflow: auto;
+          padding-right: 2px;
+        }
+
+        .question-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          padding: 12px 14px;
+          background: color-mix(in srgb, var(--bg) 84%, transparent);
+        }
+
+        .question-main {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .question-title {
+          font-weight: 600;
+        }
+
+        .question-meta {
+          color: var(--muted);
+          font-size: 12px;
+        }
+
+        .open-link {
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          background: color-mix(in srgb, var(--accent) 12%, transparent);
+          color: var(--text);
+          padding: 8px 12px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+
+        .selected-sheet {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .sheet-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .ghost-button {
+          white-space: nowrap;
+        }
+
+        .loading-pill {
+          align-self: flex-start;
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          padding: 6px 10px;
+          color: var(--muted);
+          font-size: 12px;
+          background: color-mix(in srgb, var(--accent) 8%, transparent);
+        }
+
+        .error-card {
+          border: 1px solid color-mix(in srgb, #ef4444 38%, var(--border));
+          background: color-mix(in srgb, #ef4444 9%, var(--bg-elevated));
+          border-radius: 18px;
+          padding: 18px;
+        }
+
+        .error-title {
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .error-message,
+        .error-help {
+          margin-top: 8px;
+          color: var(--muted);
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .error-help code {
+          display: block;
+          margin-top: 8px;
+          padding: 10px 12px;
+          border-radius: 12px;
+          background: color-mix(in srgb, var(--bg) 78%, transparent);
+          color: var(--text);
+          overflow: auto;
+        }
+
+        [hidden] {
+          display: none !important;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="shell">
+        <header class="hero">
+          <div class="eyebrow">LCX Workbook Explorer</div>
+          <h1>${escapeHtml2(title)}</h1>
+          <div class="subtitle">
+            ${state.summary ? `Loaded ${formatNumber2(state.summary.sheetCount)} sheets from <code>${escapeHtml2(state.summary.workbookPath)}</code>` : "Connect the workbook path in your LCX config to browse companies and sheet stats."}
+          </div>
+          <div class="tabs">
+            <button class="tab-button ${state.activeTab === "stats" ? "active" : ""}" data-tab="stats" type="button">Stats</button>
+            <button class="tab-button ${state.activeTab === "companies" ? "active" : ""}" data-tab="companies" type="button">Companies</button>
+            <button class="tab-button" data-tab="refresh" type="button">Refresh</button>
+          </div>
+        </header>
+
+        ${state.errorMessage ? renderError2(state.errorMessage) : ""}
+        ${statsSection}
+        ${companiesSection}
+      </div>
+
+      <script>
+        const vscode = acquireVsCodeApi();
+
+        document.querySelectorAll('[data-tab]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const tab = button.getAttribute('data-tab');
+            if (tab === 'refresh') {
+              vscode.postMessage({ command: 'refresh' });
+              return;
+            }
+            vscode.postMessage({ command: 'switchTab', tab });
+          });
+        });
+
+        document.querySelectorAll('[data-sheet]').forEach((button) => {
+          button.addEventListener('click', () => {
+            vscode.postMessage({ command: 'loadSheet', sheetName: button.getAttribute('data-sheet') });
+          });
+        });
+
+        document.querySelectorAll('[data-url]').forEach((button) => {
+          button.addEventListener('click', () => {
+            vscode.postMessage({ command: 'openUrl', url: button.getAttribute('data-url') });
+          });
+        });
+
+        const backButton = document.querySelector('[data-action="back"]');
+        if (backButton) {
+          backButton.addEventListener('click', () => {
+            vscode.postMessage({ command: 'clearSheet' });
+          });
+        }
+
+        const sheetFilter = document.getElementById('sheet-filter');
+        if (sheetFilter) {
+          sheetFilter.addEventListener('input', () => {
+            const term = sheetFilter.value.trim().toLowerCase();
+            document.querySelectorAll('[data-search]').forEach((card) => {
+              const text = card.getAttribute('data-search') || '';
+              card.style.display = text.includes(term) ? '' : 'none';
+            });
+          });
+        }
+
+        const questionFilter = document.getElementById('question-filter');
+        if (questionFilter) {
+          questionFilter.addEventListener('input', () => {
+            const term = questionFilter.value.trim().toLowerCase();
+            document.querySelectorAll('#question-list [data-search]').forEach((row) => {
+              const text = row.getAttribute('data-search') || '';
+              row.style.display = text.includes(term) ? '' : 'none';
+            });
+          });
+        }
+      </script>
+    </body>
+  </html>`;
+}
+var CompanyExplorerPanel = class _CompanyExplorerPanel {
+  constructor(panel, extensionUri, initialTab) {
+    this.extensionUri = extensionUri;
+    this.panel = panel;
+    this.state.activeTab = initialTab;
+    this.panel.onDidDispose(() => {
+      this.disposed = true;
+      if (_CompanyExplorerPanel.currentPanel === this) {
+        _CompanyExplorerPanel.currentPanel = void 0;
+      }
+    });
+    this.panel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this.extensionUri]
+    };
+    this.panel.webview.onDidReceiveMessage(async (message) => {
+      switch (message.command) {
+        case "switchTab":
+          this.state.activeTab = message.tab === "companies" ? "companies" : "stats";
+          this.render();
+          break;
+        case "loadSheet":
+          if (typeof message.sheetName === "string" && message.sheetName.trim()) {
+            await this.loadSheet(message.sheetName.trim());
+          }
+          break;
+        case "clearSheet":
+          this.state.selectedSheet = null;
+          this.state.loadingSheet = null;
+          this.state.errorMessage = null;
+          this.render();
+          break;
+        case "openUrl":
+          if (typeof message.url === "string" && message.url) {
+            vscode.env.openExternal(vscode.Uri.parse(message.url));
+          }
+          break;
+        case "refresh":
+          await this.refresh();
+          break;
+      }
+    });
+  }
+  extensionUri;
+  static currentPanel;
+  panel;
+  state = {
+    activeTab: "stats",
+    stats: null,
+    summary: null,
+    selectedSheet: null,
+    loadingSheet: null,
+    errorMessage: null
+  };
+  disposed = false;
+  static async show(extensionUri, initialTab) {
+    if (_CompanyExplorerPanel.currentPanel) {
+      _CompanyExplorerPanel.currentPanel.state.activeTab = initialTab;
+      _CompanyExplorerPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
+      _CompanyExplorerPanel.currentPanel.render();
+      await _CompanyExplorerPanel.currentPanel.refresh();
+      return;
+    }
+    const panel = vscode.window.createWebviewPanel(
+      "lcxWorkbookExplorer",
+      "LCX Workbook Explorer",
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true
+      }
+    );
+    _CompanyExplorerPanel.currentPanel = new _CompanyExplorerPanel(
+      panel,
+      extensionUri,
+      initialTab
+    );
+    await _CompanyExplorerPanel.currentPanel.refresh();
+  }
+  async refresh() {
+    if (this.disposed) {
+      return;
+    }
+    this.state.loadingSheet = null;
+    this.state.errorMessage = null;
+    try {
+      const [stats, summary] = await Promise.all([
+        runCliJsonCommand(["stats", "--json"]),
+        runCliJsonCommand(["companies", "--json"])
+      ]);
+      this.state.stats = stats;
+      this.state.summary = summary;
+      this.render();
+    } catch (error) {
+      this.state.stats = null;
+      this.state.summary = null;
+      this.state.selectedSheet = null;
+      this.state.errorMessage = error instanceof Error ? error.message : String(error);
+      this.render();
+    }
+  }
+  async loadSheet(sheetName) {
+    if (this.disposed) {
+      return;
+    }
+    this.state.loadingSheet = sheetName;
+    this.state.errorMessage = null;
+    this.render();
+    try {
+      const payload = await runCliJsonCommand([
+        "companies",
+        sheetName,
+        "--json",
+        "--all"
+      ]);
+      this.state.selectedSheet = payload.sheet;
+      this.state.activeTab = "companies";
+      this.render();
+    } catch (error) {
+      this.state.selectedSheet = null;
+      this.state.errorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.state.loadingSheet = null;
+      this.render();
+    }
+  }
+  render() {
+    if (this.disposed) {
+      return;
+    }
+    this.panel.webview.html = getCompanyExplorerContent(this.state);
+  }
+};
+
+// src/extension.ts
+var activeProblem = null;
 function activate(context) {
   const provider = new IcarusProblemViewProvider(context.extensionUri);
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(
+    vscode2.window.registerWebviewViewProvider(
       "icarus-sidebar-view",
       provider
     )
   );
   context.subscriptions.push(
-    vscode.commands.registerCommand("lcx.showProblemDescription", async () => {
-      await vscode.commands.executeCommand("workbench.view.extension.icarus");
+    vscode2.commands.registerCommand("lcx.showProblemDescription", async () => {
+      await vscode2.commands.executeCommand("workbench.view.extension.icarus");
       provider.refresh();
     })
   );
   context.subscriptions.push(
-    vscode.commands.registerCommand("lcx.run", () => {
+    vscode2.commands.registerCommand("lcx.run", () => {
       provider.runLcxCommand("run");
     })
   );
   context.subscriptions.push(
-    vscode.commands.registerCommand("lcx.submit", () => {
+    vscode2.commands.registerCommand("lcx.submit", () => {
       provider.runLcxCommand("submit");
     })
   );
   context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
+    vscode2.commands.registerCommand("lcx.showStats", async () => {
+      await CompanyExplorerPanel.show(context.extensionUri, "stats");
+    })
+  );
+  context.subscriptions.push(
+    vscode2.commands.registerCommand("lcx.showCompanies", async () => {
+      await CompanyExplorerPanel.show(context.extensionUri, "companies");
+    })
+  );
+  context.subscriptions.push(
+    vscode2.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
         provider.checkActiveEditor(editor.document.fileName);
+      } else {
+        provider.clearActiveProblem();
       }
     })
   );
-  if (vscode.window.activeTextEditor) {
+  if (vscode2.window.activeTextEditor) {
     provider.checkActiveEditor(
-      vscode.window.activeTextEditor.document.fileName
+      vscode2.window.activeTextEditor.document.fileName
     );
   }
 }
@@ -2775,6 +4153,11 @@ var IcarusProblemViewProvider = class {
   }
   _extensionUri;
   _view;
+  emptyStateMode = "home";
+  emptyStateSummary = null;
+  emptyStateSelectedCompany = null;
+  emptyStateLoadingLabel = null;
+  emptyStateErrorMessage = null;
   resolveWebviewView(webviewView, context, _token) {
     this._view = webviewView;
     webviewView.webview.options = {
@@ -2782,7 +4165,7 @@ var IcarusProblemViewProvider = class {
       localResourceRoots: [this._extensionUri]
     };
     this.updateWebview();
-    webviewView.webview.onDidReceiveMessage((message) => {
+    webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case "run":
           this.runLcxCommand("run");
@@ -2790,22 +4173,48 @@ var IcarusProblemViewProvider = class {
         case "submit":
           this.runLcxCommand("submit");
           break;
+        case "browseCompanies":
+          await this.showCompanyBrowser();
+          break;
+        case "backHome":
+          this.goBackHome();
+          break;
+        case "backCompanies":
+          this.goBackToCompanies();
+          break;
+        case "selectCompany":
+          if (typeof message.companyName === "string" && message.companyName) {
+            await this.selectCompany(message.companyName);
+          }
+          break;
+        case "openProblem":
+          if (typeof message.slug === "string" && message.slug) {
+            await this.openProblemFromSidebar(message.slug);
+          }
+          break;
       }
     });
   }
   refresh() {
     this.updateWebview();
   }
+  clearActiveProblem() {
+    if (!activeProblem) {
+      this.updateWebview();
+      return;
+    }
+    activeProblem = null;
+    this.updateWebview();
+  }
   // Check if opened file is inside the local solutions folder and load problem.json
   checkActiveEditor(filePath) {
-    const parentDir = path.dirname(filePath);
-    const metaPath = path.join(parentDir, "metadata.json");
-    const problemJsonPath = path.join(parentDir, "problem.json");
-    const fileName = path.basename(filePath);
+    const parentDir = path2.dirname(filePath);
+    const metaPath = path2.join(parentDir, "metadata.json");
+    const fileName = path2.basename(filePath);
     const isSolutionFile = fileName.startsWith("solution.latest.") || fileName.startsWith("solution.accepted-submit.");
-    if (isSolutionFile && fs.existsSync(metaPath)) {
+    if (isSolutionFile && fs2.existsSync(metaPath)) {
       try {
-        const metadata = fs.readJsonSync(metaPath);
+        const metadata = fs2.readJsonSync(metaPath);
         activeProblem = {
           slug: metadata.titleSlug,
           dir: parentDir,
@@ -2814,26 +4223,34 @@ var IcarusProblemViewProvider = class {
         };
         this.updateWebview();
       } catch (err) {
+        activeProblem = null;
         console.error("Failed to read metadata.json:", err);
+        this.updateWebview();
       }
+      return;
     }
+    activeProblem = null;
+    this.updateWebview();
   }
   updateWebview() {
     if (!this._view) {
       return;
     }
     if (!activeProblem) {
-      this._view.webview.html = getWebviewContent(null);
+      this._view.webview.html = getWebviewContent(
+        null,
+        this.getEmptyState()
+      );
       return;
     }
-    const problemJsonPath = path.join(activeProblem.dir, "problem.json");
-    const metaPath = path.join(activeProblem.dir, "metadata.json");
+    const problemJsonPath = path2.join(activeProblem.dir, "problem.json");
+    const metaPath = path2.join(activeProblem.dir, "metadata.json");
     try {
-      if (fs.existsSync(problemJsonPath)) {
-        const problemData = fs.readJsonSync(problemJsonPath);
+      if (fs2.existsSync(problemJsonPath)) {
+        const problemData = fs2.readJsonSync(problemJsonPath);
         this._view.webview.html = getWebviewContent(problemData);
-      } else if (fs.existsSync(metaPath)) {
-        const metadata = fs.readJsonSync(metaPath);
+      } else if (fs2.existsSync(metaPath)) {
+        const metadata = fs2.readJsonSync(metaPath);
         this._view.webview.html = getWebviewContent({
           frontendId: metadata.frontendId,
           title: metadata.title,
@@ -2847,31 +4264,120 @@ var IcarusProblemViewProvider = class {
         });
       }
     } catch (err) {
-      this._view.webview.html = getWebviewContent(null);
+      this._view.webview.html = getWebviewContent(
+        null,
+        this.getEmptyState()
+      );
+    }
+  }
+  getEmptyState() {
+    return {
+      mode: this.emptyStateMode,
+      summary: this.emptyStateSummary,
+      selectedCompany: this.emptyStateSelectedCompany,
+      loadingLabel: this.emptyStateLoadingLabel,
+      errorMessage: this.emptyStateErrorMessage
+    };
+  }
+  async showCompanyBrowser() {
+    this.emptyStateMode = "companies";
+    this.emptyStateErrorMessage = null;
+    if (this.emptyStateSummary) {
+      this.updateWebview();
+      return;
+    }
+    this.emptyStateLoadingLabel = "Loading company workbook...";
+    this.updateWebview();
+    try {
+      this.emptyStateSummary = await runCliJsonCommand([
+        "companies",
+        "--json"
+      ]);
+    } catch (error) {
+      this.emptyStateErrorMessage = error instanceof Error ? error.message : String(error);
+      this.emptyStateMode = "home";
+    } finally {
+      this.emptyStateLoadingLabel = null;
+      this.updateWebview();
+    }
+  }
+  goBackHome() {
+    this.emptyStateMode = "home";
+    this.emptyStateSelectedCompany = null;
+    this.emptyStateLoadingLabel = null;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+  }
+  goBackToCompanies() {
+    this.emptyStateMode = "companies";
+    this.emptyStateSelectedCompany = null;
+    this.emptyStateLoadingLabel = null;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+  }
+  async selectCompany(companyName) {
+    this.emptyStateLoadingLabel = `Loading ${companyName} questions...`;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+    try {
+      const payload = await runCliJsonCommand([
+        "companies",
+        companyName,
+        "--json",
+        "--all"
+      ]);
+      this.emptyStateSelectedCompany = payload.sheet;
+      this.emptyStateMode = "problems";
+    } catch (error) {
+      this.emptyStateErrorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.emptyStateLoadingLabel = null;
+      this.updateWebview();
+    }
+  }
+  async openProblemFromSidebar(slug) {
+    this.emptyStateLoadingLabel = `Opening ${slug}...`;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+    try {
+      const result = await runCliJsonCommand([
+        "open",
+        slug,
+        "--json",
+        "--no-editor"
+      ]);
+      const document = await vscode2.workspace.openTextDocument(
+        vscode2.Uri.file(result.solutionPath)
+      );
+      await vscode2.window.showTextDocument(document, { preview: false });
+    } catch (error) {
+      this.emptyStateErrorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.emptyStateLoadingLabel = null;
+      this.updateWebview();
     }
   }
   // Spawn the CLI to execute "run" or "submit" commands.
   runLcxCommand(type) {
     if (!activeProblem) {
-      vscode.window.showErrorMessage("No active LeetCode solution file is open.");
+      vscode2.window.showErrorMessage("No active LeetCode solution file is open.");
       return;
     }
     if (!this._view) {
       return;
     }
     const webview = this._view.webview;
-    let cliPath = path.resolve(__dirname, "..", "..", "dist", "index.js");
-    if (!fs.existsSync(cliPath)) {
-      cliPath = "/Users/divyanksisodia/lcx/dist/index.js";
-    }
-    if (!fs.existsSync(cliPath)) {
+    let cliPath;
+    try {
+      cliPath = resolveCliPath();
+    } catch (error) {
       webview.postMessage({
         command: "error",
-        text: `Icarus CLI executable not found at: ${cliPath}. Please build the CLI project by running "npm run build" in the root directory first.`
+        text: error instanceof Error ? error.message : "LCX CLI executable not found."
       });
       return;
     }
-    const child = cp.spawn("node", [cliPath, type], {
+    const child = cp2.spawn("node", [cliPath, type], {
       cwd: activeProblem.dir,
       env: { ...process.env, FORCE_COLOR: "0" }
     });

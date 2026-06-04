@@ -1,0 +1,17 @@
+{
+  "title": "Minimum Cost to Make at Least One Valid Path in a Grid",
+  "titleSlug": "minimum-cost-to-make-at-least-one-valid-path-in-a-grid",
+  "frontendId": "1368",
+  "difficulty": "Hard",
+  "language": "cpp",
+  "topicTags": [
+    "array",
+    "breadth-first-search",
+    "graph",
+    "heap-priority-queue",
+    "matrix",
+    "shortest-path"
+  ],
+  "openedAt": "2026-06-04T12:59:30.240Z",
+  "lastModifiedAt": "2026-06-04T12:59:30.240Z"
+}

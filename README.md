@@ -22,6 +22,7 @@ lcx open two-sum       # Open a problem workspace
 lcx run                # Run code (from workspace)
 lcx submit             # Submit code (from workspace)
 lcx stats              # View local stats
+lcx companies          # Browse the company workbook
 lcx config             # View/set config
 ```
 
@@ -69,6 +70,7 @@ lcx submit              → submits for final judgment
 lcx config                          # View config
 lcx config set defaultLanguage python
 lcx config set workspacePath ~/LCX
+lcx config set companyWorkbookPath "~/Downloads/Leetcode problem set (company tag, sorted by freq).xlsx"
 lcx config set autoOpenEditor false
 ```
 
@@ -77,6 +79,7 @@ Default config at `~/LCX/config.json`:
 ```json
 {
   "workspacePath": "~/LCX",
+  "companyWorkbookPath": "~/Downloads/Leetcode problem set (company tag, sorted by freq).xlsx",
   "defaultLanguage": "cpp",
   "theme": "purple-terminal",
   "runTarget": "leetcode",
@@ -108,12 +111,14 @@ LCX uses your personal LeetCode session and respects rate limits.
 - Run/submit endpoints may need manual verification and updates (marked with TODO blocks).
 - OS-level secure credential storage (keytar) is not yet implemented; secrets are in a local file with a warning.
 - The dashboard's "weak topics" and "recommended next" sections are placeholders.
+- The company workbook browser expects `companyWorkbookPath` to point at your local `.xlsx` file.
 
 ## Future Roadmap
 
 - Richer terminal UI (ink/blessed with tabs and keyboard navigation)
 - VS Code extension (shared core package)
 - Stats dashboard improvements (weak topics from attempt data, real recommendations)
+- Company workbook browser in the CLI and VS Code extension
 - OS keychain integration via keytar
 - Config UI
 - Daily challenge integration

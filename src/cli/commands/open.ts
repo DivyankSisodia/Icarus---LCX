@@ -8,6 +8,7 @@ import { loadConfig } from "../../core/config/config";
 interface OpenOptions {
   language?: string;
   editor?: boolean;
+  json?: boolean;
 }
 
 export async function openCommand(
@@ -23,9 +24,9 @@ export async function openCommand(
   }
 
   const displaySlug = /^\d+$/.test(slug) ? `#${slug}` : slug;
-  const spinner = ora(
-    `Opening problem "${displaySlug}"...`
-  ).start();
+  const spinner = options.json
+    ? null
+    : ora(`Opening problem "${displaySlug}"...`).start();
 
   try {
     const resolvedSlug = await resolveSlug(slug);
@@ -36,7 +37,26 @@ export async function openCommand(
 
     const { dir, solutionPath } = openProblem(problem, lang);
 
-    spinner.succeed(
+    if (options.json) {
+      console.log(
+        JSON.stringify(
+          {
+            title: problem.title,
+            titleSlug: problem.titleSlug,
+            frontendId: problem.frontendId,
+            difficulty: problem.difficulty,
+            dir,
+            solutionPath,
+            paidOnly: problem.paidOnly,
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+
+    spinner?.succeed(
       chalk.green(`Opened ${chalk.bold(problem.title)} (#${problem.frontendId})`)
     );
 
@@ -96,10 +116,18 @@ export async function openCommand(
       );
     }
   } catch (error) {
-    spinner.fail(
-      chalk.red(
-        `Failed to open problem: ${error instanceof Error ? error.message : "Unknown error"}`
-      )
+    if (spinner) {
+      spinner.fail(
+        chalk.red(
+          `Failed to open problem: ${error instanceof Error ? error.message : "Unknown error"}`
+        )
+      );
+      return;
+    }
+
+    console.error(
+      `Failed to open problem: ${error instanceof Error ? error.message : "Unknown error"}`
     );
+    process.exitCode = 1;
   }
 }

@@ -10,6 +10,7 @@ import { runCode } from "../core/leetcode/run";
 import { submitCode } from "../core/leetcode/submit";
 import { recordAttempt, recordSolved } from "../core/stats/attempts";
 import { getStats } from "../core/stats/reports";
+import { companiesCommand } from "../cli/commands/companies";
 import { loadConfig, updateConfig } from "../core/config/config";
 import { saveSecrets, clearSecrets } from "../core/config/secrets";
 import { getDb } from "../core/stats/db";
@@ -113,6 +114,11 @@ async function dispatch(input: string): Promise<void> {
     case "st":
     case "stats":
       await doStats();
+      break;
+
+    case "co":
+    case "companies":
+      await doCompanies(rest);
       break;
 
     case "c":
@@ -254,6 +260,8 @@ async function showDashboard(): Promise<void> {
       chalk.gray("/run  ") +
       DIM("sub") +
       chalk.gray("/submit  ") +
+      DIM("co") +
+      chalk.gray("/companies  ") +
       DIM("q") +
       chalk.gray("/quit")
   );
@@ -569,6 +577,20 @@ async function doStats(): Promise<void> {
   }
 }
 
+async function doCompanies(args: string): Promise<void> {
+  const company = args.trim() || undefined;
+
+  try {
+    companiesCommand(company, {
+      limit: "50",
+      all: false,
+    });
+    console.log("");
+  } catch (err) {
+    console.log(chalk.red(`  ${err instanceof Error ? err.message : err}`));
+  }
+}
+
 async function doConfig(): Promise<void> {
   const config = loadConfig();
   const secrets = loadSecrets();
@@ -666,6 +688,7 @@ function showHelp(): void {
   console.log(`  ${PURPLE("r")}  run          Run code on LeetCode`);
   console.log(`  ${PURPLE("sub")} submit      Submit code to LeetCode`);
   console.log(`  ${PURPLE("st")} stats       Show your stats`);
+  console.log(`  ${PURPLE("co")} companies   Browse company workbook sheets`);
   console.log(`  ${PURPLE("c")}  config      View config  |  config set <k> <v>`);
   console.log(`  ${PURPLE("login")}          Authenticate`);
   console.log(`  ${PURPLE("logout")}         Clear credentials`);

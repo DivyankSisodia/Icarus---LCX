@@ -147,6 +147,11 @@ export async function dashboardCommand(): Promise<void> {
   );
   console.log(
     chalk.gray("    ") +
+      chalk.cyan("lcx companies") +
+      chalk.gray("         Browse company workbook sheets")
+  );
+  console.log(
+    chalk.gray("    ") +
       chalk.cyan("lcx config") +
       chalk.gray("           View/set configuration")
   );

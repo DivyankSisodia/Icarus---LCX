@@ -3,6 +3,9 @@ import * as path from "path";
 import * as fs from "fs-extra";
 import * as cp from "child_process";
 import { getWebviewContent } from "./webview";
+import { CompanyExplorerPanel } from "./companyExplorer";
+import { EmptySidebarState } from "./sidebarEmptyState";
+import { resolveCliPath, runCliJsonCommand, stripAnsi } from "./cliRunner";
 
 let activeProblem: {
   slug: string;
@@ -11,12 +14,14 @@ let activeProblem: {
   language: string;
 } | null = null;
 
-// Helper to strip ANSI codes from child process output
-function stripAnsi(str: string): string {
-  return str.replace(
-    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
-    ""
-  );
+interface OpenProblemResult {
+  title: string;
+  titleSlug: string;
+  frontendId: string;
+  difficulty: string;
+  dir: string;
+  solutionPath: string;
+  paidOnly: boolean;
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -50,11 +55,25 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("lcx.showStats", async () => {
+      await CompanyExplorerPanel.show(context.extensionUri, "stats");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("lcx.showCompanies", async () => {
+      await CompanyExplorerPanel.show(context.extensionUri, "companies");
+    })
+  );
+
   // Listen to active text editor changes
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
         provider.checkActiveEditor(editor.document.fileName);
+      } else {
+        provider.clearActiveProblem();
       }
     })
   );
@@ -69,6 +88,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
+  private emptyStateMode: EmptySidebarState["mode"] = "home";
+  private emptyStateSummary: EmptySidebarState["summary"] = null;
+  private emptyStateSelectedCompany: EmptySidebarState["selectedCompany"] = null;
+  private emptyStateLoadingLabel: EmptySidebarState["loadingLabel"] = null;
+  private emptyStateErrorMessage: EmptySidebarState["errorMessage"] = null;
 
   constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -87,13 +111,32 @@ class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
     this.updateWebview();
 
     // Handle messages from the webview
-    webviewView.webview.onDidReceiveMessage((message) => {
+    webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.command) {
         case "run":
           this.runLcxCommand("run");
           break;
         case "submit":
           this.runLcxCommand("submit");
+          break;
+        case "browseCompanies":
+          await this.showCompanyBrowser();
+          break;
+        case "backHome":
+          this.goBackHome();
+          break;
+        case "backCompanies":
+          this.goBackToCompanies();
+          break;
+        case "selectCompany":
+          if (typeof message.companyName === "string" && message.companyName) {
+            await this.selectCompany(message.companyName);
+          }
+          break;
+        case "openProblem":
+          if (typeof message.slug === "string" && message.slug) {
+            await this.openProblemFromSidebar(message.slug);
+          }
           break;
       }
     });
@@ -103,11 +146,20 @@ class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
     this.updateWebview();
   }
 
+  public clearActiveProblem() {
+    if (!activeProblem) {
+      this.updateWebview();
+      return;
+    }
+
+    activeProblem = null;
+    this.updateWebview();
+  }
+
   // Check if opened file is inside the local solutions folder and load problem.json
   public checkActiveEditor(filePath: string) {
     const parentDir = path.dirname(filePath);
     const metaPath = path.join(parentDir, "metadata.json");
-    const problemJsonPath = path.join(parentDir, "problem.json");
 
     const fileName = path.basename(filePath);
     const isSolutionFile =
@@ -125,9 +177,15 @@ class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
         };
         this.updateWebview();
       } catch (err) {
+        activeProblem = null;
         console.error("Failed to read metadata.json:", err);
+        this.updateWebview();
       }
+      return;
     }
+
+    activeProblem = null;
+    this.updateWebview();
   }
 
   private updateWebview() {
@@ -136,7 +194,10 @@ class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
     }
 
     if (!activeProblem) {
-      this._view.webview.html = getWebviewContent(null);
+      this._view.webview.html = getWebviewContent(
+        null,
+        this.getEmptyState()
+      );
       return;
     }
 
@@ -163,7 +224,113 @@ class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
         });
       }
     } catch (err) {
-      this._view.webview.html = getWebviewContent(null);
+      this._view.webview.html = getWebviewContent(
+        null,
+        this.getEmptyState()
+      );
+    }
+  }
+
+  private getEmptyState(): EmptySidebarState {
+    return {
+      mode: this.emptyStateMode,
+      summary: this.emptyStateSummary,
+      selectedCompany: this.emptyStateSelectedCompany,
+      loadingLabel: this.emptyStateLoadingLabel,
+      errorMessage: this.emptyStateErrorMessage,
+    };
+  }
+
+  private async showCompanyBrowser() {
+    this.emptyStateMode = "companies";
+    this.emptyStateErrorMessage = null;
+
+    if (this.emptyStateSummary) {
+      this.updateWebview();
+      return;
+    }
+
+    this.emptyStateLoadingLabel = "Loading company workbook...";
+    this.updateWebview();
+
+    try {
+      this.emptyStateSummary = (await runCliJsonCommand([
+        "companies",
+        "--json",
+      ])) as EmptySidebarState["summary"];
+    } catch (error) {
+      this.emptyStateErrorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.emptyStateMode = "home";
+    } finally {
+      this.emptyStateLoadingLabel = null;
+      this.updateWebview();
+    }
+  }
+
+  private goBackHome() {
+    this.emptyStateMode = "home";
+    this.emptyStateSelectedCompany = null;
+    this.emptyStateLoadingLabel = null;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+  }
+
+  private goBackToCompanies() {
+    this.emptyStateMode = "companies";
+    this.emptyStateSelectedCompany = null;
+    this.emptyStateLoadingLabel = null;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+  }
+
+  private async selectCompany(companyName: string) {
+    this.emptyStateLoadingLabel = `Loading ${companyName} questions...`;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+
+    try {
+      const payload = (await runCliJsonCommand([
+        "companies",
+        companyName,
+        "--json",
+        "--all",
+      ])) as { sheet: EmptySidebarState["selectedCompany"] };
+
+      this.emptyStateSelectedCompany = payload.sheet;
+      this.emptyStateMode = "problems";
+    } catch (error) {
+      this.emptyStateErrorMessage =
+        error instanceof Error ? error.message : String(error);
+    } finally {
+      this.emptyStateLoadingLabel = null;
+      this.updateWebview();
+    }
+  }
+
+  private async openProblemFromSidebar(slug: string) {
+    this.emptyStateLoadingLabel = `Opening ${slug}...`;
+    this.emptyStateErrorMessage = null;
+    this.updateWebview();
+
+    try {
+      const result = (await runCliJsonCommand([
+        "open",
+        slug,
+        "--json",
+        "--no-editor",
+      ])) as OpenProblemResult;
+
+      const document = await vscode.workspace.openTextDocument(
+        vscode.Uri.file(result.solutionPath)
+      );
+      await vscode.window.showTextDocument(document, { preview: false });
+    } catch (error) {
+      this.emptyStateErrorMessage =
+        error instanceof Error ? error.message : String(error);
+    } finally {
+      this.emptyStateLoadingLabel = null;
+      this.updateWebview();
     }
   }
 
@@ -180,18 +347,14 @@ class IcarusProblemViewProvider implements vscode.WebviewViewProvider {
 
     const webview = this._view.webview;
 
-    // Resolve the bundled CLI entry point (dist/index.js).
-    // 1. First try relative to extension directory (works in development or package layout)
-    let cliPath = path.resolve(__dirname, "..", "..", "dist", "index.js");
-    if (!fs.existsSync(cliPath)) {
-      // 2. Try directly resolving in /Users/divyanksisodia/lcx/dist/index.js (local workspace)
-      cliPath = "/Users/divyanksisodia/lcx/dist/index.js";
-    }
-
-    if (!fs.existsSync(cliPath)) {
+    let cliPath: string;
+    try {
+      cliPath = resolveCliPath();
+    } catch (error) {
       webview.postMessage({
         command: "error",
-        text: `Icarus CLI executable not found at: ${cliPath}. Please build the CLI project by running "npm run build" in the root directory first.`,
+        text:
+          error instanceof Error ? error.message : "LCX CLI executable not found.",
       });
       return;
     }

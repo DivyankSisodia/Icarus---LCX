@@ -75,5 +75,11 @@ export function configCommand(options: ConfigOptions): void {
     chalk.gray('    Example: ') +
       chalk.white("lcx config set defaultLanguage python")
   );
+  console.log(
+    chalk.gray("    Example: ") +
+      chalk.white(
+        'lcx config set companyWorkbookPath "~/Downloads/Leetcode problem set (company tag, sorted by freq).xlsx"'
+      )
+  );
   console.log("");
 }

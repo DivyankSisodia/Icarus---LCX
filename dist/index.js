@@ -494,6 +494,7 @@ var import_os3 = __toESM(require("os"));
 var import_zod = require("zod");
 var LcxConfigSchema = import_zod.z.object({
   workspacePath: import_zod.z.string().default("~/LCX"),
+  companyWorkbookPath: import_zod.z.string().default(""),
   defaultLanguage: import_zod.z.string().default("cpp"),
   theme: import_zod.z.string().default("purple-terminal"),
   runTarget: import_zod.z.enum(["leetcode"]).default("leetcode"),
@@ -506,6 +507,7 @@ var LcxConfigSchema = import_zod.z.object({
 });
 var DEFAULT_CONFIG = {
   workspacePath: "~/LCX",
+  companyWorkbookPath: "",
   defaultLanguage: "cpp",
   theme: "purple-terminal",
   runTarget: "leetcode",
@@ -1092,16 +1094,32 @@ async function openCommand(slug, options) {
     return;
   }
   const displaySlug = /^\d+$/.test(slug) ? `#${slug}` : slug;
-  const spinner = (0, import_ora4.default)(
-    `Opening problem "${displaySlug}"...`
-  ).start();
+  const spinner = options.json ? null : (0, import_ora4.default)(`Opening problem "${displaySlug}"...`).start();
   try {
     const resolvedSlug = await resolveSlug(slug);
     const problem = await getProblem(resolvedSlug);
     const config = loadConfig();
     const lang = options.language || config.defaultLanguage;
     const { dir, solutionPath } = openProblem(problem, lang);
-    spinner.succeed(
+    if (options.json) {
+      console.log(
+        JSON.stringify(
+          {
+            title: problem.title,
+            titleSlug: problem.titleSlug,
+            frontendId: problem.frontendId,
+            difficulty: problem.difficulty,
+            dir,
+            solutionPath,
+            paidOnly: problem.paidOnly
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    spinner?.succeed(
       import_chalk4.default.green(`Opened ${import_chalk4.default.bold(problem.title)} (#${problem.frontendId})`)
     );
     console.log("");
@@ -1150,11 +1168,18 @@ async function openCommand(slug, options) {
       );
     }
   } catch (error) {
-    spinner.fail(
-      import_chalk4.default.red(
-        `Failed to open problem: ${error instanceof Error ? error.message : "Unknown error"}`
-      )
+    if (spinner) {
+      spinner.fail(
+        import_chalk4.default.red(
+          `Failed to open problem: ${error instanceof Error ? error.message : "Unknown error"}`
+        )
+      );
+      return;
+    }
+    console.error(
+      `Failed to open problem: ${error instanceof Error ? error.message : "Unknown error"}`
     );
+    process.exitCode = 1;
   }
 }
 
@@ -1823,10 +1848,15 @@ function printStats() {
     }
     console.log("");
   }
+  return stats;
 }
 
 // src/cli/commands/stats.ts
 function statsCommand(options) {
+  if (options.json) {
+    console.log(JSON.stringify(getStats(), null, 2));
+    return;
+  }
   printStats();
   if (options.topic) {
     console.log(
@@ -1840,8 +1870,355 @@ function statsCommand(options) {
   }
 }
 
-// src/cli/commands/config.ts
+// src/cli/commands/companies.ts
 var import_chalk8 = __toESM(require("chalk"));
+var import_ora7 = __toESM(require("ora"));
+
+// src/core/company/workbook.ts
+var import_fs_extra7 = __toESM(require("fs-extra"));
+var import_os4 = __toESM(require("os"));
+var import_path7 = __toESM(require("path"));
+var XLSX = __toESM(require("xlsx"));
+var DIFFICULTY_SHEETS = /* @__PURE__ */ new Set(["easy", "medium", "hard"]);
+var DEFAULT_WORKBOOK_BASENAME = "Leetcode problem set (company tag, sorted by freq).xlsx";
+var WORKBOOK_NAME_HINTS = [
+  "leetcode problem set",
+  "company tag",
+  "sorted by freq"
+];
+function normalizeSheetName(name) {
+  return name.trim().toLowerCase().replace(/\s+/g, "");
+}
+function isDifficultySheet(name) {
+  return DIFFICULTY_SHEETS.has(normalizeSheetName(name));
+}
+function slugToTitle(slug) {
+  if (!slug) {
+    return "Unknown question";
+  }
+  return slug.split(/[-_]/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
+}
+function parseLeetCodeUrl(url) {
+  const parsed = new URL(url);
+  const slug = parsed.pathname.replace(/\/$/, "").split("/").pop() || url;
+  return {
+    slug,
+    title: slugToTitle(slug),
+    envType: parsed.searchParams.get("envType") || void 0,
+    envId: parsed.searchParams.get("envId") || void 0,
+    favoriteSlug: parsed.searchParams.get("favoriteSlug") || void 0
+  };
+}
+function parseTextCell(value) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return "";
+}
+function matchesWorkbookName(fileName) {
+  const normalized = fileName.toLowerCase();
+  return normalized.endsWith(".xlsx") && WORKBOOK_NAME_HINTS.every((hint) => normalized.includes(hint));
+}
+function searchDirectoryForWorkbook(directory, preferredName) {
+  if (!import_fs_extra7.default.existsSync(directory) || !import_fs_extra7.default.statSync(directory).isDirectory()) {
+    return null;
+  }
+  const entries = import_fs_extra7.default.readdirSync(directory, { withFileTypes: true });
+  const lowerPreferredName = preferredName?.toLowerCase().trim();
+  if (lowerPreferredName) {
+    const preferredExact = entries.find(
+      (entry) => entry.isFile() && entry.name.toLowerCase() === lowerPreferredName
+    );
+    if (preferredExact) {
+      return import_path7.default.join(directory, preferredExact.name);
+    }
+    if (!lowerPreferredName.endsWith(".xlsx")) {
+      const preferredWithExtension = entries.find(
+        (entry) => entry.isFile() && entry.name.toLowerCase() === `${lowerPreferredName}.xlsx`
+      );
+      if (preferredWithExtension) {
+        return import_path7.default.join(directory, preferredWithExtension.name);
+      }
+    }
+  }
+  const fuzzyMatch = entries.find(
+    (entry) => entry.isFile() && matchesWorkbookName(entry.name)
+  );
+  if (fuzzyMatch) {
+    return import_path7.default.join(directory, fuzzyMatch.name);
+  }
+  return null;
+}
+function autoDetectWorkbookPath(preferredName) {
+  const searchRoots = [
+    import_path7.default.join(import_os4.default.homedir(), "Downloads"),
+    import_os4.default.homedir(),
+    process.cwd()
+  ];
+  for (const root of searchRoots) {
+    const found = searchDirectoryForWorkbook(root, preferredName);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+function getConfiguredWorkbookPath(explicitPath) {
+  const config = loadConfig();
+  const sourcePath = explicitPath?.trim() || config.companyWorkbookPath.trim();
+  if (sourcePath) {
+    const resolved = expandPath(sourcePath);
+    if (import_fs_extra7.default.existsSync(resolved)) {
+      return resolved;
+    }
+    const autoDetected = autoDetectWorkbookPath(import_path7.default.basename(sourcePath));
+    if (autoDetected) {
+      return autoDetected;
+    }
+  } else {
+    const autoDetected = autoDetectWorkbookPath(DEFAULT_WORKBOOK_BASENAME);
+    if (autoDetected) {
+      return autoDetected;
+    }
+  }
+  throw new Error(
+    "No company workbook configured or found automatically. Set `companyWorkbookPath` with `lcx config set companyWorkbookPath <path>` or pass `--file <path>`."
+  );
+}
+function loadWorkbook(filePath) {
+  if (!import_fs_extra7.default.existsSync(filePath)) {
+    throw new Error(`Workbook not found: ${filePath}`);
+  }
+  return XLSX.readFile(filePath, {
+    cellDates: false,
+    cellText: false,
+    cellStyles: false
+  });
+}
+function parseSheetRows(sheetName, rows) {
+  const questions = [];
+  const difficultySheet = isDifficultySheet(sheetName);
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const urlCell = difficultySheet ? row[2] : row[0];
+    const url = parseTextCell(urlCell);
+    if (!url || !url.startsWith("http")) {
+      continue;
+    }
+    const parsedUrl = parseLeetCodeUrl(url);
+    const question = {
+      rowNumber: index + 1,
+      url,
+      slug: parsedUrl.slug,
+      title: parsedUrl.title,
+      isDailyQuestion: parsedUrl.envType === "daily-question",
+      envType: parsedUrl.envType,
+      envId: parsedUrl.envId,
+      favoriteSlug: parsedUrl.favoriteSlug
+    };
+    if (difficultySheet) {
+      question.topic = parseTextCell(row[1]) || void 0;
+      question.difficulty = parseTextCell(row[3]) || sheetName;
+    }
+    questions.push(question);
+  }
+  return questions;
+}
+function summarizeSheet(sheetName, questions) {
+  const kind = isDifficultySheet(sheetName) ? "difficulty" : "company";
+  const dailyQuestions = questions.filter((question) => question.isDailyQuestion).length;
+  const companyQuestions = questions.length - dailyQuestions;
+  return {
+    name: sheetName,
+    kind,
+    totalQuestions: questions.length,
+    companyQuestions,
+    dailyQuestions
+  };
+}
+function resolveCompanyWorkbookPath(explicitPath) {
+  return getConfiguredWorkbookPath(explicitPath);
+}
+function getCompanyWorkbookSummary(explicitPath) {
+  const workbookPath = getConfiguredWorkbookPath(explicitPath);
+  const workbook = loadWorkbook(workbookPath);
+  const sheets = workbook.SheetNames.map((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      blankrows: true,
+      defval: ""
+    });
+    const questions = parseSheetRows(sheetName, rows);
+    return summarizeSheet(sheetName, questions);
+  });
+  const companySheets = sheets.filter((sheet) => sheet.kind === "company");
+  const difficultySheets = sheets.filter((sheet) => sheet.kind === "difficulty");
+  const totalQuestions = sheets.reduce((sum, sheet) => sum + sheet.totalQuestions, 0);
+  return {
+    workbookPath,
+    sheetCount: sheets.length,
+    totalQuestions,
+    companySheets,
+    difficultySheets,
+    sheets
+  };
+}
+function getCompanySheetDetail(sheetName, explicitPath) {
+  const workbookPath = getConfiguredWorkbookPath(explicitPath);
+  const workbook = loadWorkbook(workbookPath);
+  const resolvedSheetName = workbook.SheetNames.find(
+    (candidate) => normalizeSheetName(candidate) === normalizeSheetName(sheetName)
+  );
+  if (!resolvedSheetName) {
+    const available = workbook.SheetNames.join(", ");
+    throw new Error(
+      `Sheet "${sheetName}" was not found in ${import_path7.default.basename(workbookPath)}. Available sheets: ${available}`
+    );
+  }
+  const worksheet = workbook.Sheets[resolvedSheetName];
+  const rows = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    blankrows: true,
+    defval: ""
+  });
+  const questions = parseSheetRows(resolvedSheetName, rows);
+  const summary = summarizeSheet(resolvedSheetName, questions);
+  return {
+    ...summary,
+    questions
+  };
+}
+
+// src/cli/commands/companies.ts
+function formatCountLabel(summary) {
+  if (summary.kind === "difficulty") {
+    return `${summary.totalQuestions} questions`;
+  }
+  const companyLabel = `${summary.companyQuestions} company question${summary.companyQuestions === 1 ? "" : "s"}`;
+  const dailyLabel = summary.dailyQuestions > 0 ? ` + ${summary.dailyQuestions} daily question${summary.dailyQuestions === 1 ? "" : "s"}` : "";
+  return `${companyLabel}${dailyLabel}`;
+}
+function printSummary(summary) {
+  console.log("");
+  console.log(import_chalk8.default.bold.magenta("  LCX Company Workbook"));
+  console.log(import_chalk8.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
+  console.log(
+    import_chalk8.default.gray("  Workbook: ") + import_chalk8.default.white(summary.workbookPath)
+  );
+  console.log(
+    import_chalk8.default.gray("  Sheets:   ") + import_chalk8.default.white(String(summary.sheetCount)) + import_chalk8.default.gray(" | ") + import_chalk8.default.white(`${summary.companySheets.length} company`) + import_chalk8.default.gray(" | ") + import_chalk8.default.white(`${summary.difficultySheets.length} difficulty`)
+  );
+  console.log(
+    import_chalk8.default.gray("  Entries:  ") + import_chalk8.default.white(String(summary.totalQuestions))
+  );
+  console.log("");
+  for (const sheet of summary.sheets) {
+    const label = sheet.kind === "difficulty" ? import_chalk8.default.yellow(sheet.name) : import_chalk8.default.cyan(sheet.name);
+    console.log(
+      `  ${label.padEnd(22)} ${import_chalk8.default.white(formatCountLabel(sheet))}`
+    );
+  }
+  console.log("");
+}
+function printDetail(detail, limit) {
+  console.log("");
+  console.log(import_chalk8.default.bold.magenta(`  ${detail.name}`));
+  console.log(import_chalk8.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
+  if (detail.kind === "difficulty") {
+    console.log(
+      import_chalk8.default.gray("  Questions: ") + import_chalk8.default.white(String(detail.totalQuestions)) + import_chalk8.default.gray(" | ") + import_chalk8.default.white("difficulty sheet")
+    );
+  } else {
+    console.log(
+      import_chalk8.default.gray("  Questions: ") + import_chalk8.default.white(String(detail.totalQuestions)) + import_chalk8.default.gray(" | ") + import_chalk8.default.white(`${detail.companyQuestions} company question${detail.companyQuestions === 1 ? "" : "s"}`) + (detail.dailyQuestions > 0 ? import_chalk8.default.gray(" | ") + import_chalk8.default.white(
+        `${detail.dailyQuestions} daily question${detail.dailyQuestions === 1 ? "" : "s"}`
+      ) : "")
+    );
+  }
+  console.log("");
+  const displayed = detail.questions.slice(0, limit);
+  if (detail.questions.length === 0) {
+    console.log(import_chalk8.default.yellow("  No questions found in this sheet."));
+    console.log("");
+    return;
+  }
+  if (detail.questions.length > limit) {
+    console.log(
+      import_chalk8.default.gray(`  Showing ${displayed.length} of ${detail.questions.length} questions`)
+    );
+    console.log("");
+  }
+  for (const question of displayed) {
+    printQuestion(question, detail.kind);
+  }
+  console.log("");
+}
+function printQuestion(question, kind) {
+  const numberLabel = import_chalk8.default.gray(`${String(question.rowNumber).padStart(4)}.`);
+  const titleLabel = question.isDailyQuestion ? import_chalk8.default.green(question.title) : import_chalk8.default.white(question.title);
+  const meta = [];
+  if (kind === "difficulty" && question.topic) {
+    meta.push(import_chalk8.default.gray(question.topic));
+  }
+  if (question.difficulty) {
+    meta.push(import_chalk8.default.yellow(question.difficulty));
+  }
+  if (question.isDailyQuestion) {
+    meta.push(import_chalk8.default.green("daily"));
+  }
+  console.log(`  ${numberLabel} ${titleLabel}`);
+  if (meta.length > 0) {
+    console.log(`      ${meta.join(import_chalk8.default.gray(" | "))}`);
+  }
+  console.log(`      ${import_chalk8.default.gray(question.url)}`);
+}
+function companiesCommand(companyName, options) {
+  const spinner = options.json ? null : (0, import_ora7.default)("Loading workbook...").start();
+  try {
+    if (companyName) {
+      const detail = getCompanySheetDetail(companyName, options.file);
+      const limit = options.all ? Number.POSITIVE_INFINITY : Math.max(1, parseInt(options.limit || "", 10) || 50);
+      spinner?.succeed(`Loaded ${detail.name}`);
+      if (options.json) {
+        const payload = {
+          workbookPath: resolveCompanyWorkbookPath(options.file),
+          sheet: detail
+        };
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+      }
+      printDetail(detail, limit);
+      return;
+    }
+    const summary = getCompanyWorkbookSummary(options.file);
+    spinner?.succeed(`Loaded ${summary.sheetCount} sheets`);
+    if (options.json) {
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+    printSummary(summary);
+  } catch (error) {
+    if (spinner) {
+      spinner.fail(
+        import_chalk8.default.red(
+          `Failed to load workbook: ${error instanceof Error ? error.message : "Unknown error"}`
+        )
+      );
+      return;
+    }
+    console.error(
+      `Failed to load workbook: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
+    process.exitCode = 1;
+  }
+}
+
+// src/cli/commands/config.ts
+var import_chalk9 = __toESM(require("chalk"));
 function configCommand(options) {
   if (options.set) {
     const [key, value] = options.set;
@@ -1849,13 +2226,13 @@ function configCommand(options) {
       const updated = updateConfig(key, value);
       console.log("");
       console.log(
-        import_chalk8.default.green(
+        import_chalk9.default.green(
           `  \u2713 ${key} set to ${JSON.stringify(updated[key])}`
         )
       );
     } catch (error) {
       console.log(
-        import_chalk8.default.red(
+        import_chalk9.default.red(
           `  \u2717 Failed to set config: ${error instanceof Error ? error.message : "Unknown error"}`
         )
       );
@@ -1865,63 +2242,68 @@ function configCommand(options) {
   const config = loadConfig();
   const secrets = loadSecrets();
   console.log("");
-  console.log(import_chalk8.default.bold.magenta("  LCX Configuration"));
-  console.log(import_chalk8.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
+  console.log(import_chalk9.default.bold.magenta("  LCX Configuration"));
+  console.log(import_chalk9.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
   console.log("");
   const entries = Object.entries(config);
   for (const [key, value] of entries) {
     const valStr = typeof value === "boolean" ? value ? "true" : "false" : String(value);
     console.log(
-      `  ${import_chalk8.default.white(key.padEnd(22))} ${import_chalk8.default.cyan(valStr)}`
+      `  ${import_chalk9.default.white(key.padEnd(22))} ${import_chalk9.default.cyan(valStr)}`
     );
   }
   console.log("");
-  console.log(import_chalk8.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
+  console.log(import_chalk9.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
   console.log(
-    `  ${import_chalk8.default.white("Authenticated".padEnd(22))} ${secrets ? import_chalk8.default.green("Yes") + import_chalk8.default.gray(` (${secrets.LEETCODE_SESSION.slice(0, 8)}...)`) : import_chalk8.default.red("No")}`
+    `  ${import_chalk9.default.white("Authenticated".padEnd(22))} ${secrets ? import_chalk9.default.green("Yes") + import_chalk9.default.gray(` (${secrets.LEETCODE_SESSION.slice(0, 8)}...)`) : import_chalk9.default.red("No")}`
   );
   console.log("");
   console.log(
-    import_chalk8.default.gray("  Config file: ") + import_chalk8.default.white("~/LCX/config.json")
+    import_chalk9.default.gray("  Config file: ") + import_chalk9.default.white("~/LCX/config.json")
   );
   console.log(
-    import_chalk8.default.gray("  Secrets file: ") + import_chalk8.default.white("~/.lcx/secrets.json")
+    import_chalk9.default.gray("  Secrets file: ") + import_chalk9.default.white("~/.lcx/secrets.json")
   );
   console.log("");
-  console.log(import_chalk8.default.gray("  To update a setting:"));
+  console.log(import_chalk9.default.gray("  To update a setting:"));
   console.log(
-    import_chalk8.default.gray("    ") + import_chalk8.default.cyan("lcx config set <key> <value>")
+    import_chalk9.default.gray("    ") + import_chalk9.default.cyan("lcx config set <key> <value>")
   );
   console.log(
-    import_chalk8.default.gray("    Example: ") + import_chalk8.default.white("lcx config set defaultLanguage python")
+    import_chalk9.default.gray("    Example: ") + import_chalk9.default.white("lcx config set defaultLanguage python")
+  );
+  console.log(
+    import_chalk9.default.gray("    Example: ") + import_chalk9.default.white(
+      'lcx config set companyWorkbookPath "~/Downloads/Leetcode problem set (company tag, sorted by freq).xlsx"'
+    )
   );
   console.log("");
 }
 
 // src/tui/repl.ts
 var readline = __toESM(require("readline"));
-var import_chalk10 = __toESM(require("chalk"));
+var import_chalk11 = __toESM(require("chalk"));
 
 // src/tui/banner.ts
-var import_chalk9 = __toESM(require("chalk"));
+var import_chalk10 = __toESM(require("chalk"));
 
 // src/tui/ascii_art.ts
 var ICARUS_ART = "                                                                                                    \n                                                                                                    \n  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . \n .   .  .  .::.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . \n           .=.%                                                                                     \n . .  .    ..*:*   .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  \n.     .      :**. .+*.   .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  \n   .    .     .%: :+=.                                                                              \n.  .    .  .  ..=.:*:  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .   .\n     .   ...    . .+.     .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . \n  .  .    -:      ..  ..                                                                            \n .     .      ..%-.  .+=   .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .   \n.   .   ..    .%*-   *:*.  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n   .     .::..%-+:::.%:=                                                                            \n  .   .   :@*---++=#.*+:   .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n        . #@%=::=#-*=*:    .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n  . .     %###::==:+=.                                                                              \n     .   .#+*#:::-:*:   .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . .:*#..  \n.     . . *=+**.:-:+..     .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . ..***%.    \n.  .   .=:*:*+#..-.=-*: .                                                               .+**##.     \n   .    .:*:=+*#.:.=#:%: .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  ..-*=***.  .  .\n          =::++*:=.*::=-    .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  =*%=#*%.      .\n  .  .    .=.-==%=.=:::= ...                                                      ..#*%=**@.        \n  .  .  .  =-.+==+.-:::+ :==  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .   .%***=**.   . ..  \n         .#++:.*=*:-:::=-*:%.    .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  . .:*-+#:+**         .\n.  .  .   *=**.--:+:..:**::*.                                                 .:#*:++-=+#.  .       \n   .     .:==#%.--:+=..%:::%  ..  .  .  .  .  .  .  .  .  .  .  .  .  .  .   .==%:-=*=*#:    . ..   \n      .    *.=*%.--:%..*:::=      .  .  .  .  .  .  .  .  .  .  .  .  .  .  .*.*+:==:+++          ..\n .    .    +=.=-%:-:=*.*::-..                                              :*.+%::=*:=*.  .  .      \n  .      . .*..+=#::::==..-    ..  .  .  .  .  .  .  .  .  .  .  .  .  .  -**.*=.:=.+*:      .  .   \n   .  .    .+*:.==#-.:==:.:        .  .  .  .  .  .  .  .  .  .  .  .  . :-#:-*::-*:==.         .  .\n.     .    .=:=%.:-#*..+=.: .  ...                                      .=-*.-*.:=:-*:  . ..        \n        .   .=.-==.+.#:.+::   .=-*=:  .  .  .  .  .  .  .  .  .  .  . ..*.=*:=:.:=.=*.       ..  .  \n . ..   .    .-.:=*=+.+:.+:   .*=.:#..   .  .  .  .  .  .  .  .  .     *%.==:=..:=:=:            .  \n.            .*%+.:=*::=-.+:.  .-.:.::=. .%=.                       . ::#:-::= -%:.#.  .. ..        \n     ..   .   :--==.:*.==+.==.  :::#%=.:*=*==.   .  .  .  .  .  .  . .*=%::::=*:=.:* .       ..  .  \n. .      .     .:-::**+.:=* :=. .##@@=:*%...:=.+.   .  .  .  .  .   .=.=#::.:+: -.-:             .  \n   .    .   .   .=.=::*.-::+ :*.    .*-@-...::-*.                    =.=*:-.%.. = =..  .  ..        \n.   .  .   .     .=-.=:*..:.*..*.    .+##::.::===##*#+..  .  .  . . .=-=+.:=:...-.=    .     ..  .  \n.         .   .   :*%=.:=+...: .=:.   :%*+: .*-:=:..=.+. .. .. ..   .+=-:--+....-.+.             .  \n   .  .  .   .     :==+*:+.=:.=. :*.  :%=:  .*@==-: ..= .==+=-++.   :+..:*.* .:.:.*  .   . .        \n.     .     .   .  ..*:-::*+...-. .#-.-#....=*=:==: .+=.*%#:=#===:=..+.-:%.-..:.-.*   .       .  .  \n .       .     .      *..:=+.:=:-:. :%:%=:.:.:==.:. ..-.#-+:::::=*: .:-.+:=-:.=.=.*.   .   .     .  \n   ..   .   .    .-**+*#+- .*:.::==.  :*#:=- .-*:.   .+*+=@=*=:.-+-+:--:*.-.:.-:=.*..   .  .        \n.      .   .    .*:-::::=-:=%:+=:::-+.   :%.. ..*=  .%-+%@**+*-+::+*:=.-:-:::.::= +           ..    \n .    .   .   ..=---::::-:=*:.:=-=+=++::. .:*...:-=.-*%*+@-++-++::*=.-:..=::::-#.:=   .  .       .. \n    .    .   ..*-=+:-:=---.:%-**-.:::=*::.  .:#.=+++%+-+%@==**+-*-: .=-..=-::-#: =.      .  .       \n   .    .   .:%::+=*=+=-==+=:=#::=+*:.==.      %::::::***@@%***#*:  .+:#+::::#...+  .       .  .    \n.     .    ..*-:-+#%@=*=*=====:=*+..:=*=.#-... .*::::::=%@@@:=-     .=::=-:=* ..+.  .  .       .  . \n .   .      :*:-+**#%+:%#*%=*:.:-=:**%+..=:-... ==:-=:**#+*@@-   . ..+=:::%: .:*:.     .  .       . \n  .     ..  +=:=-==--. .:*%%*:.==+:*#==::*:::-:..* .. .::.  +**.   .===*#:..::#.          .  .      \n   .    .*=+-*--:=+:.      .@::=#*=%===:.:--.::..*...   ....:-:-=:+*%*:. :::+=     . .       .  .   \n.   . .:*-:::#%%+.          .#=:=%%@+=-=:::..+:...::...+#..  ........:::::**   .      . .       .   \n.     .:*:::-+=.*       .       .-::*:::-::--::.:::.:::.. ..::::::::::-**:.     .  .     . .        \n   .     ....::..  .   .   .        .+.:..:....+---:..:.:::.=*=:=%@#=:.      .     .        . .  .. \n  .                 .                 .=*==+%@*==::=:-*=-..:*%==-=%.          .       ..            \n .   .               .  ..   .  .        .  .*%#+==+=+=+##*@#*:+*#:    .  .     ..       ..   .     \n.   .  .  .  .  ..          .   .  .         ..  ::... .  :@@:-.+-.       .  .     ..        .  ..  \n   .   .  .  .     .  .    .       .  ..  .              ..@%*:::+. .  .      .       ..    .       \n.                  .  .  .    .                 .         .#%=::.%.    .  .      .       .     .   .\n   . .  .  .   .         .   .  ..  .   .   .  .   .  .    %*:::.#..      .  .     ..    .  .       \n  .     .  .  .  .  .       .       .  .   .      .     .  *%*:-::*.  .      .  .     .     .    .  \n .   .           .  .  .   .   .          .   .  .   .    ..#=.=..::   .  .      .     .       .  . \n    .   .  .  .        .         .  .  .     .        .     *-==-:.-.     .  .      .   . .   .    .\n   .   .   .  .  .  .    .   .      .  .  .     .  .        .+--::.-.        .  .          .        \n.     .          .  .    .     .          .  .  .     . .    .*-%:-.-.. .       .  .  .     .   .   \n .   .   .  .         .    .   .  .  .       .     .     .     =%#==.:====+.       .  .  .   .  .   \n  .     .   .  .  .   .    .      .  .  .       .   .     .      .+%:.:.:-:.  .          .        ..\n   .   .       .  .     .    .          .  .     .    ..   .  .   :%%*-.+.    .  .  .      .  .     \n    .     .         .   .    .  .  .       .  .                   .:=*@+==       .  .  .   .  .  .  \n.    .   .  ..  .   .     .     .  .  .        .   .    .  .            .. .  .        .            \n.     .         .     .   .  .        .  .  .   .  .   .   .  ..              .  .  .    .  .  .    \n  ..   .  .       .   .      .  .  .     .  .         .          ..  .           .  .    .  .  .  . ";
 
 // src/tui/banner.ts
 function printBanner() {
-  console.log(import_chalk9.default.white(ICARUS_ART));
+  console.log(import_chalk10.default.white(ICARUS_ART));
 }
 
 // src/tui/repl.ts
 var import_child_process3 = require("child_process");
-var import_fs_extra7 = __toESM(require("fs-extra"));
-var import_path7 = __toESM(require("path"));
+var import_fs_extra8 = __toESM(require("fs-extra"));
+var import_path8 = __toESM(require("path"));
 var rl = null;
 var problemCache = [];
 var lastDetectedProblem = null;
-var PURPLE = import_chalk10.default.hex("#a855f7");
-var DIM = import_chalk10.default.hex("#71717a");
+var PURPLE = import_chalk11.default.hex("#a855f7");
+var DIM = import_chalk11.default.hex("#71717a");
 async function startRepl() {
   printBanner();
   rl = readline.createInterface({
@@ -1942,13 +2324,13 @@ async function startRepl() {
         await dispatch(input);
       }
     } catch (err) {
-      console.log(import_chalk10.default.red(`  Error: ${err instanceof Error ? err.message : err}`));
+      console.log(import_chalk11.default.red(`  Error: ${err instanceof Error ? err.message : err}`));
     }
     rl?.prompt();
   });
   rl.on("close", () => {
     console.log("");
-    console.log(import_chalk10.default.gray("  Stay strong, struggler."));
+    console.log(import_chalk11.default.gray("  Stay strong, struggler."));
     process.exit(0);
   });
   await showDashboard();
@@ -1969,7 +2351,7 @@ async function dispatch(input) {
     case "s":
     case "search":
       if (!rest) {
-        console.log(import_chalk10.default.yellow("  Usage: search <query>"));
+        console.log(import_chalk11.default.yellow("  Usage: search <query>"));
         return;
       }
       await doSearch(rest);
@@ -1977,7 +2359,7 @@ async function dispatch(input) {
     case "o":
     case "open":
       if (!rest) {
-        console.log(import_chalk10.default.yellow("  Usage: open <slug>"));
+        console.log(import_chalk11.default.yellow("  Usage: open <slug>"));
         return;
       }
       await doOpen(rest);
@@ -1994,6 +2376,10 @@ async function dispatch(input) {
     case "stats":
       await doStats();
       break;
+    case "co":
+    case "companies":
+      await doCompanies(rest);
+      break;
     case "c":
     case "config":
       if (rest) {
@@ -2007,7 +2393,7 @@ async function dispatch(input) {
       break;
     case "logout":
       clearSecrets();
-      console.log(import_chalk10.default.yellow("  Logged out."));
+      console.log(import_chalk11.default.yellow("  Logged out."));
       break;
     case "cd":
       if (rest) {
@@ -2016,7 +2402,7 @@ async function dispatch(input) {
           lastDetectedProblem = { slug: detected.slug, title: detected.metadata.title };
           console.log(PURPLE(`  Switched to: ${detected.metadata.title}`));
         } else {
-          console.log(import_chalk10.default.yellow("  Not in a problem workspace."));
+          console.log(import_chalk11.default.yellow("  Not in a problem workspace."));
         }
       }
       break;
@@ -2036,13 +2422,13 @@ async function dispatch(input) {
       console.clear();
       break;
     default:
-      console.log(import_chalk10.default.yellow(`  Unknown command: ${cmd}`));
+      console.log(import_chalk11.default.yellow(`  Unknown command: ${cmd}`));
       console.log(DIM("  Type 'h' for help"));
   }
 }
 async function showDashboard() {
   console.log("");
-  console.log(import_chalk10.default.bold.magenta("  \u2554\u2550\u2550 Dashboard \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"));
+  console.log(import_chalk11.default.bold.magenta("  \u2554\u2550\u2550 Dashboard \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"));
   console.log("");
   const secrets = loadSecrets();
   let solvedCount = 0;
@@ -2053,22 +2439,22 @@ async function showDashboard() {
       username = viewer.username;
       solvedCount = viewer.solvedCount;
       console.log(
-        `  ${PURPLE("User")}     ${import_chalk10.default.white(username)}  ${import_chalk10.default.green("\u25CF")} online`
+        `  ${PURPLE("User")}     ${import_chalk11.default.white(username)}  ${import_chalk11.default.green("\u25CF")} online`
       );
       console.log(
-        `  ${PURPLE("Solved")}   ${import_chalk10.default.green(String(solvedCount))}  ${import_chalk10.default.gray("|")}  ${PURPLE("Rank")}  ${import_chalk10.default.yellow(`#${viewer.ranking.toLocaleString()}`)}`
+        `  ${PURPLE("Solved")}   ${import_chalk11.default.green(String(solvedCount))}  ${import_chalk11.default.gray("|")}  ${PURPLE("Rank")}  ${import_chalk11.default.yellow(`#${viewer.ranking.toLocaleString()}`)}`
       );
     } catch {
-      console.log(`  ${PURPLE("Status")}   ${import_chalk10.default.red("Session expired \u2014 type 'login'")}`);
+      console.log(`  ${PURPLE("Status")}   ${import_chalk11.default.red("Session expired \u2014 type 'login'")}`);
     }
   } else {
-    console.log(`  ${PURPLE("Status")}   ${import_chalk10.default.yellow("Not logged in \u2014 type 'login'")}`);
+    console.log(`  ${PURPLE("Status")}   ${import_chalk11.default.yellow("Not logged in \u2014 type 'login'")}`);
   }
   try {
     const stats = getStats();
     if (stats.totalAttempts > 0) {
       console.log(
-        `  ${PURPLE("Local")}    ${import_chalk10.default.green(`${stats.solvedCount} solved`)}  ${import_chalk10.default.gray("|")}  ${stats.totalAttempts} attempts  ${import_chalk10.default.gray("|")}  ${import_chalk10.default.yellow(stats.acceptanceRate)} rate`
+        `  ${PURPLE("Local")}    ${import_chalk11.default.green(`${stats.solvedCount} solved`)}  ${import_chalk11.default.gray("|")}  ${stats.totalAttempts} attempts  ${import_chalk11.default.gray("|")}  ${import_chalk11.default.yellow(stats.acceptanceRate)} rate`
       );
     }
   } catch {
@@ -2077,11 +2463,11 @@ async function showDashboard() {
   if (detected) {
     lastDetectedProblem = { slug: detected.slug, title: detected.metadata.title };
     console.log(
-      `  ${PURPLE("Current")}  ${import_chalk10.default.cyan(detected.metadata.title)} ${import_chalk10.default.gray(`(#${detected.metadata.frontendId})`)} ${import_chalk10.default.yellow(detected.metadata.difficulty)}`
+      `  ${PURPLE("Current")}  ${import_chalk11.default.cyan(detected.metadata.title)} ${import_chalk11.default.gray(`(#${detected.metadata.frontendId})`)} ${import_chalk11.default.yellow(detected.metadata.difficulty)}`
     );
   }
   console.log("");
-  console.log(import_chalk10.default.bold.magenta("  \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"));
+  console.log(import_chalk11.default.bold.magenta("  \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"));
   console.log("");
   if (problemCache.length === 0) {
     try {
@@ -2096,7 +2482,7 @@ async function showDashboard() {
       clearInterval(interval);
       process.stdout.write("\r\x1B[K");
     } catch (err) {
-      console.log(import_chalk10.default.gray(`  Could not fetch problems: ${err instanceof Error ? err.message : err}`));
+      console.log(import_chalk11.default.gray(`  Could not fetch problems: ${err instanceof Error ? err.message : err}`));
     }
   }
   if (problemCache.length > 0) {
@@ -2104,20 +2490,20 @@ async function showDashboard() {
   }
   console.log("");
   console.log(
-    DIM("  d") + import_chalk10.default.gray("/dashboard  ") + DIM("p") + import_chalk10.default.gray("/problems  ") + DIM("s") + import_chalk10.default.gray("/search  ") + DIM("o") + import_chalk10.default.gray("/open  ") + DIM("r") + import_chalk10.default.gray("/run  ") + DIM("sub") + import_chalk10.default.gray("/submit  ") + DIM("q") + import_chalk10.default.gray("/quit")
+    DIM("  d") + import_chalk11.default.gray("/dashboard  ") + DIM("p") + import_chalk11.default.gray("/problems  ") + DIM("s") + import_chalk11.default.gray("/search  ") + DIM("o") + import_chalk11.default.gray("/open  ") + DIM("r") + import_chalk11.default.gray("/run  ") + DIM("sub") + import_chalk11.default.gray("/submit  ") + DIM("co") + import_chalk11.default.gray("/companies  ") + DIM("q") + import_chalk11.default.gray("/quit")
   );
   console.log("");
 }
 function printProblemTable(problems) {
   console.log("");
-  console.log(import_chalk10.default.bold.white("  Problems"));
-  console.log(import_chalk10.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
+  console.log(import_chalk11.default.bold.white("  Problems"));
+  console.log(import_chalk11.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
   for (const p of problems) {
-    const diffColor = p.difficulty === "Easy" ? import_chalk10.default.green : p.difficulty === "Medium" ? import_chalk10.default.yellow : import_chalk10.default.red;
-    const statusIcon = p.status === "solved" ? import_chalk10.default.green("\u2713") : p.status === "attempted" ? import_chalk10.default.yellow("~") : DIM("\u25CB");
+    const diffColor = p.difficulty === "Easy" ? import_chalk11.default.green : p.difficulty === "Medium" ? import_chalk11.default.yellow : import_chalk11.default.red;
+    const statusIcon = p.status === "solved" ? import_chalk11.default.green("\u2713") : p.status === "attempted" ? import_chalk11.default.yellow("~") : DIM("\u25CB");
     const tags = p.topicTags.slice(0, 3).map((t) => DIM(t.name)).join(" ");
     console.log(
-      `  ${statusIcon} ${import_chalk10.default.white(p.frontendId.padStart(4))}. ${import_chalk10.default.white(p.title.padEnd(35))} ${diffColor(p.difficulty.padEnd(8))} ${tags}`
+      `  ${statusIcon} ${import_chalk11.default.white(p.frontendId.padStart(4))}. ${import_chalk11.default.white(p.title.padEnd(35))} ${diffColor(p.difficulty.padEnd(8))} ${tags}`
     );
   }
 }
@@ -2130,7 +2516,7 @@ async function showProblems(args) {
     printProblemTable(problemCache);
     console.log("");
   } catch (err) {
-    console.log(import_chalk10.default.red(`  ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  ${err instanceof Error ? err.message : err}`));
   }
 }
 function parseFilters(args) {
@@ -2153,13 +2539,13 @@ async function doSearch(query) {
     const results = await searchProblems(query);
     const filtered = results.filter((p) => !p.paidOnly).slice(0, 20);
     if (filtered.length === 0) {
-      console.log(import_chalk10.default.gray("  No results."));
+      console.log(import_chalk11.default.gray("  No results."));
     } else {
       printProblemTable(filtered);
     }
     console.log("");
   } catch (err) {
-    console.log(import_chalk10.default.red(`  ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  ${err instanceof Error ? err.message : err}`));
   }
 }
 async function doOpen(input) {
@@ -2171,11 +2557,11 @@ async function doOpen(input) {
     const { dir, solutionPath } = openProblem(problem, config.defaultLanguage);
     lastDetectedProblem = { slug: problem.titleSlug, title: problem.title };
     console.log(
-      import_chalk10.default.green(
-        `  \u2713 ${problem.title} ${import_chalk10.default.gray(`(#${problem.frontendId})`)} ${problem.difficulty === "Easy" ? import_chalk10.default.green(problem.difficulty) : problem.difficulty === "Medium" ? import_chalk10.default.yellow(problem.difficulty) : import_chalk10.default.red(problem.difficulty)}`
+      import_chalk11.default.green(
+        `  \u2713 ${problem.title} ${import_chalk11.default.gray(`(#${problem.frontendId})`)} ${problem.difficulty === "Easy" ? import_chalk11.default.green(problem.difficulty) : problem.difficulty === "Medium" ? import_chalk11.default.yellow(problem.difficulty) : import_chalk11.default.red(problem.difficulty)}`
       )
     );
-    console.log(import_chalk10.default.gray(`  ${dir}`));
+    console.log(import_chalk11.default.gray(`  ${dir}`));
     if (config.autoOpenEditor) {
       try {
         (0, import_child_process3.execSync)(`${config.editorCommand} "${solutionPath}"`, { stdio: "ignore" });
@@ -2185,7 +2571,7 @@ async function doOpen(input) {
     }
     console.log("");
   } catch (err) {
-    console.log(import_chalk10.default.red(`  ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  ${err instanceof Error ? err.message : err}`));
   }
 }
 async function doRun() {
@@ -2204,29 +2590,29 @@ async function doRun() {
     lastDetectedProblem = { slug, title };
   } else if (lastDetectedProblem) {
     slug = lastDetectedProblem.slug;
-    const metaPath = import_path7.default.join(
-      import_path7.default.resolve(loadConfig().workspacePath.replace("~", require("os").homedir())),
+    const metaPath = import_path8.default.join(
+      import_path8.default.resolve(loadConfig().workspacePath.replace("~", require("os").homedir())),
       "solutions",
       slug,
       "metadata.json"
     );
-    if (import_fs_extra7.default.existsSync(metaPath)) {
-      const meta = import_fs_extra7.default.readJsonSync(metaPath);
+    if (import_fs_extra8.default.existsSync(metaPath)) {
+      const meta = import_fs_extra8.default.readJsonSync(metaPath);
       title = meta.title;
       frontendId = meta.frontendId;
       difficulty = meta.difficulty;
       language = meta.language;
     } else {
-      console.log(import_chalk10.default.yellow("  No workspace found. Use 'open <slug>' first."));
+      console.log(import_chalk11.default.yellow("  No workspace found. Use 'open <slug>' first."));
       return;
     }
   } else {
-    console.log(import_chalk10.default.yellow("  No workspace found. Use 'open <slug>' first."));
+    console.log(import_chalk11.default.yellow("  No workspace found. Use 'open <slug>' first."));
     return;
   }
   const code = readSolutionFile(slug, language);
   if (!code) {
-    console.log(import_chalk10.default.red(`  No solution file for ${slug}`));
+    console.log(import_chalk11.default.red(`  No solution file for ${slug}`));
     return;
   }
   const config = loadConfig();
@@ -2262,7 +2648,7 @@ async function doRun() {
   } catch (err) {
     clearInterval(interval);
     process.stdout.write("\r\x1B[K");
-    console.log(import_chalk10.default.red(`  Run failed: ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  Run failed: ${err instanceof Error ? err.message : err}`));
   }
 }
 async function doSubmit() {
@@ -2280,29 +2666,29 @@ async function doSubmit() {
     language = detected.metadata.language;
   } else if (lastDetectedProblem) {
     slug = lastDetectedProblem.slug;
-    const metaPath = import_path7.default.join(
-      import_path7.default.resolve(loadConfig().workspacePath.replace("~", require("os").homedir())),
+    const metaPath = import_path8.default.join(
+      import_path8.default.resolve(loadConfig().workspacePath.replace("~", require("os").homedir())),
       "solutions",
       slug,
       "metadata.json"
     );
-    if (import_fs_extra7.default.existsSync(metaPath)) {
-      const meta = import_fs_extra7.default.readJsonSync(metaPath);
+    if (import_fs_extra8.default.existsSync(metaPath)) {
+      const meta = import_fs_extra8.default.readJsonSync(metaPath);
       title = meta.title;
       frontendId = meta.frontendId;
       difficulty = meta.difficulty;
       language = meta.language;
     } else {
-      console.log(import_chalk10.default.yellow("  No workspace found. Use 'open <slug>' first."));
+      console.log(import_chalk11.default.yellow("  No workspace found. Use 'open <slug>' first."));
       return;
     }
   } else {
-    console.log(import_chalk10.default.yellow("  No workspace found. Use 'open <slug>' first."));
+    console.log(import_chalk11.default.yellow("  No workspace found. Use 'open <slug>' first."));
     return;
   }
   const code = readSolutionFile(slug, language);
   if (!code) {
-    console.log(import_chalk10.default.red(`  No solution file for ${slug}`));
+    console.log(import_chalk11.default.red(`  No solution file for ${slug}`));
     return;
   }
   console.log(PURPLE(`  Submitting ${title}...`));
@@ -2329,7 +2715,7 @@ async function doSubmit() {
     if (result.status === "Accepted") {
       if (config.saveAcceptedSubmit) {
         const p2 = saveAcceptedSubmit(slug, language, code);
-        console.log(import_chalk10.default.green(`  Saved: ${p2}`));
+        console.log(import_chalk11.default.green(`  Saved: ${p2}`));
       }
       const p = saveAttempt(slug, language, "accepted", code);
       console.log(DIM(`  Attempt: ${p}`));
@@ -2341,7 +2727,7 @@ async function doSubmit() {
         local_solution_path: saveAcceptedSubmit(slug, language, code),
         leetcode_submission_id: result.submissionId
       });
-      console.log(import_chalk10.default.green.bold("  \u2713 Accepted! Stats updated."));
+      console.log(import_chalk11.default.green.bold("  \u2713 Accepted! Stats updated."));
     } else {
       const p = saveAttempt(slug, language, result.status.toLowerCase().replace(/\s+/g, "-"), code);
       console.log(DIM(`  Attempt: ${p}`));
@@ -2350,59 +2736,71 @@ async function doSubmit() {
   } catch (err) {
     clearInterval(interval);
     process.stdout.write("\r\x1B[K");
-    console.log(import_chalk10.default.red(`  Submit failed: ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  Submit failed: ${err instanceof Error ? err.message : err}`));
   }
 }
 function printJudgeResult3(result) {
-  const icon = result.status === "Accepted" ? import_chalk10.default.green("\u2713") : result.status === "Wrong Answer" ? import_chalk10.default.red("\u2717") : result.status === "Runtime Error" ? import_chalk10.default.red("\u26A1") : result.status === "Compilation Error" ? import_chalk10.default.red("\u26A0") : result.status === "Time Limit Exceeded" ? import_chalk10.default.yellow("\u23F1") : import_chalk10.default.yellow("...");
-  const statusColor3 = result.status === "Accepted" ? import_chalk10.default.green : result.status.includes("Wrong") || result.status.includes("Error") ? import_chalk10.default.red : import_chalk10.default.yellow;
-  console.log(`  ${icon} ${statusColor3.bold(result.status)}  ${import_chalk10.default.gray(result.runtime || "")}  ${import_chalk10.default.gray(result.memory || "")}`);
-  if (result.message) console.log(import_chalk10.default.red(`  ${result.message}`));
+  const icon = result.status === "Accepted" ? import_chalk11.default.green("\u2713") : result.status === "Wrong Answer" ? import_chalk11.default.red("\u2717") : result.status === "Runtime Error" ? import_chalk11.default.red("\u26A1") : result.status === "Compilation Error" ? import_chalk11.default.red("\u26A0") : result.status === "Time Limit Exceeded" ? import_chalk11.default.yellow("\u23F1") : import_chalk11.default.yellow("...");
+  const statusColor3 = result.status === "Accepted" ? import_chalk11.default.green : result.status.includes("Wrong") || result.status.includes("Error") ? import_chalk11.default.red : import_chalk11.default.yellow;
+  console.log(`  ${icon} ${statusColor3.bold(result.status)}  ${import_chalk11.default.gray(result.runtime || "")}  ${import_chalk11.default.gray(result.memory || "")}`);
+  if (result.message) console.log(import_chalk11.default.red(`  ${result.message}`));
   if (result.submissionId) console.log(DIM(`  https://leetcode.com/submissions/detail/${result.submissionId}/`));
 }
 async function doStats() {
   try {
     const stats = getStats();
     console.log("");
-    console.log(import_chalk10.default.bold.magenta("  \u2554\u2550\u2550 Stats \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"));
-    console.log(`  ${import_chalk10.default.white("Attempts")}    ${stats.totalAttempts}`);
-    console.log(`  ${import_chalk10.default.green("Solved")}      ${stats.solvedCount}  ${import_chalk10.default.gray(`(${stats.solvedByDifficulty.Easy}E / ${stats.solvedByDifficulty.Medium}M / ${stats.solvedByDifficulty.Hard}H)`)}`);
-    console.log(`  ${import_chalk10.default.yellow("Accept Rate")} ${stats.acceptanceRate}`);
+    console.log(import_chalk11.default.bold.magenta("  \u2554\u2550\u2550 Stats \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"));
+    console.log(`  ${import_chalk11.default.white("Attempts")}    ${stats.totalAttempts}`);
+    console.log(`  ${import_chalk11.default.green("Solved")}      ${stats.solvedCount}  ${import_chalk11.default.gray(`(${stats.solvedByDifficulty.Easy}E / ${stats.solvedByDifficulty.Medium}M / ${stats.solvedByDifficulty.Hard}H)`)}`);
+    console.log(`  ${import_chalk11.default.yellow("Accept Rate")} ${stats.acceptanceRate}`);
     if (stats.recentAccepted.length > 0) {
-      console.log(`  ${import_chalk10.default.white("Recent")}      ${stats.recentAccepted.slice(0, 3).map((r) => r.title).join(", ")}`);
+      console.log(`  ${import_chalk11.default.white("Recent")}      ${stats.recentAccepted.slice(0, 3).map((r) => r.title).join(", ")}`);
     }
-    console.log(import_chalk10.default.bold.magenta("  \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"));
+    console.log(import_chalk11.default.bold.magenta("  \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"));
     console.log("");
   } catch (err) {
-    console.log(import_chalk10.default.yellow(`  No stats yet.`));
+    console.log(import_chalk11.default.yellow(`  No stats yet.`));
+  }
+}
+async function doCompanies(args) {
+  const company = args.trim() || void 0;
+  try {
+    companiesCommand(company, {
+      limit: "50",
+      all: false
+    });
+    console.log("");
+  } catch (err) {
+    console.log(import_chalk11.default.red(`  ${err instanceof Error ? err.message : err}`));
   }
 }
 async function doConfig() {
   const config = loadConfig();
   const secrets = loadSecrets();
   console.log("");
-  console.log(import_chalk10.default.bold.magenta("  \u2554\u2550\u2550 Config \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"));
+  console.log(import_chalk11.default.bold.magenta("  \u2554\u2550\u2550 Config \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557"));
   for (const [k, v] of Object.entries(config)) {
-    console.log(`  ${import_chalk10.default.white(k.padEnd(20))} ${import_chalk10.default.cyan(String(v))}`);
+    console.log(`  ${import_chalk11.default.white(k.padEnd(20))} ${import_chalk11.default.cyan(String(v))}`);
   }
-  console.log(`  ${import_chalk10.default.white("authenticated".padEnd(20))} ${secrets ? import_chalk10.default.green("yes") : import_chalk10.default.red("no")}`);
-  console.log(import_chalk10.default.bold.magenta("  \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"));
+  console.log(`  ${import_chalk11.default.white("authenticated".padEnd(20))} ${secrets ? import_chalk11.default.green("yes") : import_chalk11.default.red("no")}`);
+  console.log(import_chalk11.default.bold.magenta("  \u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D"));
   console.log(DIM("  config set <key> <value>  to change"));
   console.log("");
 }
 async function doConfigSet(args) {
   const parts = args.split(/\s+/);
   if (parts.length < 2) {
-    console.log(import_chalk10.default.yellow("  Usage: config set <key> <value>"));
+    console.log(import_chalk11.default.yellow("  Usage: config set <key> <value>"));
     return;
   }
   const [key, ...valueParts] = parts;
   const value = valueParts.join(" ");
   try {
     updateConfig(key, value);
-    console.log(import_chalk10.default.green(`  \u2713 ${key} = ${value}`));
+    console.log(import_chalk11.default.green(`  \u2713 ${key} = ${value}`));
   } catch (err) {
-    console.log(import_chalk10.default.red(`  ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  ${err instanceof Error ? err.message : err}`));
   }
 }
 async function doLogin() {
@@ -2412,7 +2810,7 @@ async function doLogin() {
     r(a.trim());
   }));
   console.log("");
-  console.log(import_chalk10.default.yellow("  Enter your LeetCode session cookies:"));
+  console.log(import_chalk11.default.yellow("  Enter your LeetCode session cookies:"));
   console.log(DIM("  (DevTools \u2192 Application \u2192 Cookies \u2192 leetcode.com)"));
   const readline22 = require("readline").createInterface({ input: process.stdin, output: process.stdout });
   const ask2 = (q) => new Promise((r) => readline22.question(q, (a) => r(a.trim())));
@@ -2420,47 +2818,47 @@ async function doLogin() {
   const csrf = await ask2(PURPLE("  csrftoken: "));
   readline22.close();
   if (!session || !csrf) {
-    console.log(import_chalk10.default.red("  Both required."));
+    console.log(import_chalk11.default.red("  Both required."));
     return;
   }
   saveSecrets(session, csrf);
   try {
     const viewer = await getViewer();
-    console.log(import_chalk10.default.green(`  \u2713 Logged in as ${viewer.username} (${viewer.solvedCount} solved)`));
+    console.log(import_chalk11.default.green(`  \u2713 Logged in as ${viewer.username} (${viewer.solvedCount} solved)`));
   } catch (err) {
-    console.log(import_chalk10.default.red(`  Verification failed: ${err instanceof Error ? err.message : err}`));
+    console.log(import_chalk11.default.red(`  Verification failed: ${err instanceof Error ? err.message : err}`));
   }
 }
 async function doListWorkspace() {
   const wsPath = loadConfig().workspacePath.replace("~", require("os").homedir());
-  const solDir = import_path7.default.join(import_path7.default.resolve(wsPath), "solutions");
-  if (!import_fs_extra7.default.existsSync(solDir)) {
-    console.log(import_chalk10.default.gray("  No solutions yet. Use 'open <slug>' to start."));
+  const solDir = import_path8.default.join(import_path8.default.resolve(wsPath), "solutions");
+  if (!import_fs_extra8.default.existsSync(solDir)) {
+    console.log(import_chalk11.default.gray("  No solutions yet. Use 'open <slug>' to start."));
     return;
   }
-  const dirs = import_fs_extra7.default.readdirSync(solDir).filter((d) => {
-    const p = import_path7.default.join(solDir, d);
-    return import_fs_extra7.default.statSync(p).isDirectory();
+  const dirs = import_fs_extra8.default.readdirSync(solDir).filter((d) => {
+    const p = import_path8.default.join(solDir, d);
+    return import_fs_extra8.default.statSync(p).isDirectory();
   });
   if (dirs.length === 0) {
-    console.log(import_chalk10.default.gray("  No solutions yet."));
+    console.log(import_chalk11.default.gray("  No solutions yet."));
     return;
   }
   console.log("");
   for (const d of dirs) {
-    const metaPath = import_path7.default.join(solDir, d, "metadata.json");
-    if (import_fs_extra7.default.existsSync(metaPath)) {
-      const meta = import_fs_extra7.default.readJsonSync(metaPath);
-      const active = lastDetectedProblem?.slug === d ? import_chalk10.default.green(" \u25B6") : "  ";
-      console.log(`${active} ${import_chalk10.default.white(meta.title.padEnd(30))} ${import_chalk10.default.gray(`#${meta.frontendId}`)} ${meta.difficulty === "Easy" ? import_chalk10.default.green(meta.difficulty) : meta.difficulty === "Medium" ? import_chalk10.default.yellow(meta.difficulty) : import_chalk10.default.red(meta.difficulty)}`);
+    const metaPath = import_path8.default.join(solDir, d, "metadata.json");
+    if (import_fs_extra8.default.existsSync(metaPath)) {
+      const meta = import_fs_extra8.default.readJsonSync(metaPath);
+      const active = lastDetectedProblem?.slug === d ? import_chalk11.default.green(" \u25B6") : "  ";
+      console.log(`${active} ${import_chalk11.default.white(meta.title.padEnd(30))} ${import_chalk11.default.gray(`#${meta.frontendId}`)} ${meta.difficulty === "Easy" ? import_chalk11.default.green(meta.difficulty) : meta.difficulty === "Medium" ? import_chalk11.default.yellow(meta.difficulty) : import_chalk11.default.red(meta.difficulty)}`);
     }
   }
   console.log("");
 }
 function showHelp() {
   console.log("");
-  console.log(import_chalk10.default.bold.magenta("  LCX Commands"));
-  console.log(import_chalk10.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
+  console.log(import_chalk11.default.bold.magenta("  LCX Commands"));
+  console.log(import_chalk11.default.gray("  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"));
   console.log(`  ${PURPLE("d")}  dashboard    Show dashboard + problems`);
   console.log(`  ${PURPLE("p")}  problems     List problems [easy|medium|hard] [solved|unsolved]`);
   console.log(`  ${PURPLE("s")}  search <q>   Search problems`);
@@ -2468,6 +2866,7 @@ function showHelp() {
   console.log(`  ${PURPLE("r")}  run          Run code on LeetCode`);
   console.log(`  ${PURPLE("sub")} submit      Submit code to LeetCode`);
   console.log(`  ${PURPLE("st")} stats       Show your stats`);
+  console.log(`  ${PURPLE("co")} companies   Browse company workbook sheets`);
   console.log(`  ${PURPLE("c")}  config      View config  |  config set <k> <v>`);
   console.log(`  ${PURPLE("login")}          Authenticate`);
   console.log(`  ${PURPLE("logout")}         Clear credentials`);
@@ -2495,7 +2894,7 @@ function createRouter() {
   program.command("search <query>").description("Search LeetCode problems by name or keyword").option("--limit <n>", "Limit results", "20").action(async (query, options) => {
     await searchCommand(query, options);
   });
-  program.command("open <slug>").description("Open a problem workspace").option("--language <lang>", "Language for the solution template").option("--no-editor", "Skip opening the editor").action(async (slug, options) => {
+  program.command("open <slug>").description("Open a problem workspace").option("--language <lang>", "Language for the solution template").option("--no-editor", "Skip opening the editor").option("--json", "Emit JSON for machine consumers").action(async (slug, options) => {
     await openCommand(slug, options);
   });
   program.command("run").description("Run code against LeetCode test cases").option("--testcase <path>", "Path to custom test case file").action(async (options) => {
@@ -2504,8 +2903,11 @@ function createRouter() {
   program.command("submit").description("Submit code to LeetCode for final judgment").action(async () => {
     await submitCommand();
   });
-  program.command("stats").description("Show local stats from SQLite").option("--topic <t>", "Filter by topic").option("--difficulty <d>", "Filter by difficulty").action((options) => {
+  program.command("stats").description("Show local stats from SQLite").option("--topic <t>", "Filter by topic").option("--difficulty <d>", "Filter by difficulty").option("--json", "Emit JSON for machine consumers").action((options) => {
     statsCommand(options);
+  });
+  program.command("companies [company]").description("Browse the company workbook or open a specific sheet").option("--file <path>", "Path to the workbook").option("--limit <n>", "Limit questions shown for a sheet", "50").option("--all", "Show every question in a sheet").option("--json", "Emit JSON for machine consumers").action((company, options) => {
+    companiesCommand(company, options);
   });
   program.command("config").description("View or update configuration").action(() => {
     configCommand({});

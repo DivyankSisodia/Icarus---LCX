@@ -6,6 +6,7 @@ import { openCommand } from "./commands/open";
 import { runCommand } from "./commands/run";
 import { submitCommand } from "./commands/submit";
 import { statsCommand } from "./commands/stats";
+import { companiesCommand } from "./commands/companies";
 import { configCommand } from "./commands/config";
 import { startRepl } from "../tui/repl";
 
@@ -53,6 +54,7 @@ export function createRouter(): Command {
     .description("Open a problem workspace")
     .option("--language <lang>", "Language for the solution template")
     .option("--no-editor", "Skip opening the editor")
+    .option("--json", "Emit JSON for machine consumers")
     .action(async (slug: string, options) => {
       await openCommand(slug, options);
     });
@@ -77,8 +79,20 @@ export function createRouter(): Command {
     .description("Show local stats from SQLite")
     .option("--topic <t>", "Filter by topic")
     .option("--difficulty <d>", "Filter by difficulty")
+    .option("--json", "Emit JSON for machine consumers")
     .action((options) => {
       statsCommand(options);
+    });
+
+  program
+    .command("companies [company]")
+    .description("Browse the company workbook or open a specific sheet")
+    .option("--file <path>", "Path to the workbook")
+    .option("--limit <n>", "Limit questions shown for a sheet", "50")
+    .option("--all", "Show every question in a sheet")
+    .option("--json", "Emit JSON for machine consumers")
+    .action((company: string | undefined, options) => {
+      companiesCommand(company, options);
     });
 
   program

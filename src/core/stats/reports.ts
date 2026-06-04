@@ -1,7 +1,7 @@
 import { getDb } from "./db";
 import chalk from "chalk";
 
-interface StatsData {
+export interface StatsData {
   totalAttempts: number;
   solvedCount: number;
   solvedByDifficulty: { Easy: number; Medium: number; Hard: number };
@@ -92,7 +92,7 @@ export function getStats(): StatsData {
   };
 }
 
-export function printStats(): void {
+export function printStats(): StatsData {
   const stats = getStats();
 
   console.log("");
@@ -128,4 +128,6 @@ export function printStats(): void {
     }
     console.log("");
   }
+
+  return stats;
 }
